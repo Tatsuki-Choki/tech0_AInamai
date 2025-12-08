@@ -8,6 +8,7 @@ import ReportScreen from './components/ReportScreen';
 import ReportAnalysisScreen from './components/ReportAnalysisScreen';
 import ReportCompleteScreen from './components/ReportCompleteScreen';
 import TeacherDashboard from './components/TeacherDashboard';
+import TeacherStudentDetail from './components/TeacherStudentDetail';
 import ReviewDateSelection from './components/ReviewDateSelection';
 import ReviewDateDetail from './components/ReviewDateDetail';
 import ThemeCreateScreen from './components/ThemeCreateScreen';
@@ -42,6 +43,7 @@ function App() {
 
         {/* 教師用保護ルート */}
         <Route path="/teacher/dashboard" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
+        <Route path="/teacher/students/:studentId" element={<ProtectedRoute><TeacherStudentDetail /></ProtectedRoute>} />
         
         {/* デフォルトリダイレクト */}
         <Route path="/" element={<Navigate to="/login" replace />} />

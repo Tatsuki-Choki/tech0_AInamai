@@ -53,6 +53,7 @@ async def get_google_user_info(access_token: str) -> GoogleUserInfo:
 async def get_or_create_user(
     db: AsyncSession,
     google_info: GoogleUserInfo,
+    requested_role: str = "student",
 ) -> User:
     """Get existing user or create new one from Google OAuth info."""
     # First, try to find by Google ID
@@ -86,14 +87,17 @@ async def get_or_create_user(
         await db.commit()
         return user
 
-    # Create new user (簡易方式: デフォルトで生徒として登録)
+    # Determine role based on request
+    role = UserRole.TEACHER if requested_role == "teacher" else UserRole.STUDENT
+
+    # Create new user
     user = User(
         id=uuid.uuid4(),
         email=google_info.email,
         name=google_info.name,
         avatar_url=google_info.picture,
         google_id=google_info.id,
-        role=UserRole.STUDENT,  # デフォルトは生徒
+        role=role,
         is_active=True,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
@@ -101,26 +105,36 @@ async def get_or_create_user(
     db.add(user)
     await db.flush()
 
-    # Create student profile
-    student = Student(
-        id=uuid.uuid4(),
-        user_id=user.id,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
-    )
-    db.add(student)
-    await db.flush()
+    if role == UserRole.TEACHER:
+        # Create teacher profile
+        teacher = Teacher(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        db.add(teacher)
+    else:
+        # Create student profile
+        student = Student(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        db.add(student)
+        await db.flush()
 
-    # Create streak record for new student
-    streak = StreakRecord(
-        id=uuid.uuid4(),
-        student_id=student.id,
-        current_streak=0,
-        max_streak=0,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
-    )
-    db.add(streak)
+        # Create streak record for new student
+        streak = StreakRecord(
+            id=uuid.uuid4(),
+            student_id=student.id,
+            current_streak=0,
+            max_streak=0,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        db.add(streak)
 
     await db.commit()
     return user
@@ -130,6 +144,7 @@ async def authenticate_with_google(
     db: AsyncSession,
     code: str,
     redirect_uri: Optional[str] = None,
+    requested_role: Optional[str] = "student",
 ) -> TokenResponse:
     """Authenticate user with Google OAuth code and return JWT tokens."""
     # Exchange code for Google access token
@@ -139,7 +154,7 @@ async def authenticate_with_google(
     google_info = await get_google_user_info(google_access_token)
 
     # Get or create user
-    user = await get_or_create_user(db, google_info)
+    user = await get_or_create_user(db, google_info, requested_role or "student")
 
     # Create JWT access token
     access_token = create_access_token(

@@ -16,8 +16,10 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.get("/google/login")
-async def google_login():
-    """Get Google OAuth login URL."""
+async def google_login(role: str = "student"):
+    """Get Google OAuth login URL with role in state."""
+    import base64
+    state = base64.urlsafe_b64encode(f"role={role}".encode()).decode()
     google_auth_url = (
         "https://accounts.google.com/o/oauth2/v2/auth"
         f"?client_id={settings.GOOGLE_CLIENT_ID}"
@@ -26,6 +28,7 @@ async def google_login():
         "&scope=openid%20email%20profile"
         "&access_type=offline"
         "&prompt=consent"
+        f"&state={state}"
     )
     return {"auth_url": google_auth_url}
 
@@ -41,6 +44,7 @@ async def google_callback(
             db=db,
             code=request.code,
             redirect_uri=request.redirect_uri,
+            requested_role=request.requested_role,
         )
         return result
     except httpx.HTTPStatusError as e:

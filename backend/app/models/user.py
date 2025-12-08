@@ -18,7 +18,7 @@ class User(BaseModel):
 
     email = Column(String(255), unique=True, nullable=False, index=True)
     name = Column(String(255), nullable=False)
-    avatar_url = Column(String(512), nullable=True)
+    avatar_url = Column(String(2048), nullable=True)
     role = Column(
         Enum(UserRole, values_callable=lambda x: [e.value for e in x]),
         nullable=False,

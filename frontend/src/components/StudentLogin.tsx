@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../lib/api';
 
-// GoogleロゴのSVGコンポーネント（簡易版）
+// GoogleロゴのSVGコンポーネント
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
     <g transform="matrix(1, 0, 0, 1, 27.009001, -39.23856)">
@@ -13,20 +13,17 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const imgCharacter = "/assets/ff72433a18795fbe8154f413cbac332dae84e27b.png"; // 修正: パスをpublic/assets前提に変更
-
 export default function StudentLogin() {
   const [googleLoginUrl, setGoogleLoginUrl] = useState<string>('');
 
   useEffect(() => {
-    // GoogleログインURLを取得
     const fetchLoginUrl = async () => {
       try {
-        const response = await api.get('/auth/google/login');
+        // 生徒用ログインなので role=student を渡す
+        const response = await api.get('/auth/google/login?role=student');
         setGoogleLoginUrl(response.data.auth_url);
       } catch (error) {
         console.error('Login URL fetch error:', error);
-        // フォールバックやエラー表示
       }
     };
     fetchLoginUrl();
@@ -39,21 +36,14 @@ export default function StudentLogin() {
   };
 
   return (
-    <div className="bg-[#fef8f5] content-stretch flex flex-col items-start pb-0 pt-[48.5px] px-[188px] relative size-full min-h-screen">
-      <div className="bg-white border border-[rgba(243,232,255,0.5)] border-solid content-stretch flex flex-col gap-[17px] h-[714px] items-center justify-center pb-px pt-[25px] px-[25px] relative rounded-[24px] shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] shrink-0 w-full max-w-md mx-auto mt-10">
-        <div className="h-[164px] relative shrink-0 w-full mb-8">
-          <div className="absolute h-[180px] left-1/2 transform -translate-x-1/2 top-[-20px] w-[200px]">
-            <div className="absolute inset-0 overflow-hidden pointer-events-none flex justify-center">
-              <img alt="" className="object-contain h-full" src={imgCharacter} />
-            </div>
-          </div>
-        </div>
-        
+    <div className="bg-[#fef8f5] content-stretch flex flex-col items-start pb-0 pt-[48.5px] px-[186px] relative size-full min-h-screen">
+      <div className="bg-white border border-[rgba(243,232,255,0.5)] border-solid content-stretch flex flex-col gap-[8px] h-[714px] items-center justify-center pb-px pt-[25px] px-[25px] relative rounded-[24px] shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] shrink-0 w-full max-w-md mx-auto mt-10">
+
         <div className="flex flex-col items-center gap-8 w-full px-8">
           <p className="font-['Zen_Maru_Gothic',sans-serif] text-[20px] text-[#59168b] text-center font-bold">
-            ログインしてください
+            探究学習日記
           </p>
-          
+
           <button
             onClick={handleLogin}
             className="flex items-center justify-center gap-3 bg-white border border-gray-300 rounded-full px-6 py-3 shadow-md hover:bg-gray-50 transition-colors w-full max-w-xs"
@@ -72,4 +62,3 @@ export default function StudentLogin() {
     </div>
   );
 }
-

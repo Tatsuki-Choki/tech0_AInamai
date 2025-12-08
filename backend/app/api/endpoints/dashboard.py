@@ -177,16 +177,22 @@ async def get_student_detail(
     )
     latest_report = result.scalar_one_or_none()
 
-    # Get ability counts
+    # Get ability counts (include all abilities, even with 0 count)
     result = await db.execute(
-        select(Ability.id, Ability.name, func.count(ReportAbility.id))
-        .join(ReportAbility, ReportAbility.ability_id == Ability.id)
-        .join(Report, Report.id == ReportAbility.report_id)
-        .where(Report.student_id == student.id)
-        .group_by(Ability.id, Ability.name)
+        select(
+            Ability.id,
+            Ability.name,
+            Ability.display_order,
+            func.count(ReportAbility.id).filter(Report.student_id == student.id)
+        )
+        .outerjoin(ReportAbility, ReportAbility.ability_id == Ability.id)
+        .outerjoin(Report, Report.id == ReportAbility.report_id)
+        .where(Ability.is_active == True)
+        .group_by(Ability.id, Ability.name, Ability.display_order)
+        .order_by(Ability.display_order)
     )
     ability_counts = [
-        AbilityCount(ability_id=row[0], ability_name=row[1], count=row[2])
+        AbilityCount(ability_id=row[0], ability_name=row[1], count=row[3] or 0)
         for row in result.all()
     ]
 

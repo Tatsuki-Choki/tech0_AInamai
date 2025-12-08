@@ -19,7 +19,8 @@ export default function TeacherLogin() {
   useEffect(() => {
     const fetchLoginUrl = async () => {
       try {
-        const response = await api.get('/auth/google/login');
+        // 教師用ログインなので role=teacher を渡す
+        const response = await api.get('/auth/google/login?role=teacher');
         setGoogleLoginUrl(response.data.auth_url);
       } catch (error) {
         console.error('Login URL fetch error:', error);

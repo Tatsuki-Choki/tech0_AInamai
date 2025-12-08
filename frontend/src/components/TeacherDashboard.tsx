@@ -5,12 +5,18 @@ import api from '../lib/api';
 
 interface Student {
   id: string;
+  user_id: string;
   name: string;
-  class: string;
-  theme: string;
-  last_report_date?: string;
-  report_count: number;
+  email: string;
+  grade?: number;
+  class_name?: string;
+  theme_title?: string;
   current_phase?: string;
+  total_reports: number;
+  current_streak: number;
+  max_streak: number;
+  last_report_date?: string;
+  is_primary: boolean;
 }
 
 export default function TeacherDashboard() {
@@ -40,8 +46,8 @@ export default function TeacherDashboard() {
     }
   };
 
-  const filteredStudents = students.filter(student => 
-    student.name.includes(searchTerm) || student.class.includes(searchTerm)
+  const filteredStudents = students.filter(student =>
+    student.name.includes(searchTerm) || (student.class_name && student.class_name.includes(searchTerm))
   );
 
   return (
@@ -110,24 +116,28 @@ export default function TeacherDashboard() {
             >
               <div className="flex items-center gap-4 mb-3">
                 <h3 className="text-[16px] font-bold text-[#59168b] w-[80px]">{student.name}</h3>
-                <span className="text-[14px] text-[rgba(152,16,250,0.7)] w-[60px]">{student.class}</span>
-                
+                <span className="text-[14px] text-[rgba(152,16,250,0.7)] w-[60px]">{student.class_name || '-'}</span>
+
                 {/* テーマバッジ */}
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <div className="w-4 h-4 bg-purple-200 rounded-full shrink-0" />
-                  <span className="text-[14px] text-[#6e11b0] truncate">{student.theme}</span>
+                  <span className="text-[14px] text-[#6e11b0] truncate">{student.theme_title || '未設定'}</span>
                 </div>
               </div>
 
               {/* ステータス情報 */}
-              <div className="grid grid-cols-3 gap-2 text-[12px] pl-4 border-t border-gray-100 pt-2">
+              <div className="grid grid-cols-4 gap-2 text-[12px] pl-4 border-t border-gray-100 pt-2">
                 <div>
                   <span className="text-gray-400 block">フェーズ:</span>
                   <span className="text-[#59168b] font-medium">{student.current_phase || '未設定'}</span>
                 </div>
                 <div>
                   <span className="text-gray-400 block">報告数:</span>
-                  <span className="text-[#59168b] font-medium">{student.report_count}件</span>
+                  <span className="text-[#59168b] font-medium">{student.total_reports}件</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block">連続:</span>
+                  <span className="text-[#59168b] font-medium">{student.current_streak}日</span>
                 </div>
                 <div>
                   <span className="text-gray-400 block">最終報告:</span>

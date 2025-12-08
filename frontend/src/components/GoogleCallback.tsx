@@ -23,9 +23,10 @@ export default function GoogleCallback() {
   useEffect(() => {
     // React.StrictModeでの二重実行防止
     if (effectRan.current) return;
-    
+
     const code = searchParams.get('code');
-    
+    const state = searchParams.get('state');
+
     if (!code) {
       console.error('No auth code found');
       navigate('/login');
@@ -34,9 +35,24 @@ export default function GoogleCallback() {
 
     effectRan.current = true;
 
+    // state パラメータから役割を取得
+    let requestedRole = 'student';
+    if (state) {
+      try {
+        const decodedState = atob(state);
+        const params = new URLSearchParams(decodedState);
+        requestedRole = params.get('role') || 'student';
+      } catch (e) {
+        console.error('Failed to parse state:', e);
+      }
+    }
+
     const exchangeCode = async () => {
       try {
-        const response = await api.post<AuthResponse>('/auth/google/callback', { code });
+        const response = await api.post<AuthResponse>('/auth/google/callback', {
+          code,
+          requested_role: requestedRole
+        });
         const { access_token, user } = response.data;
 
         // トークンとユーザー情報を保存

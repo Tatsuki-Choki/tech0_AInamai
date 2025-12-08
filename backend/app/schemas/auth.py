@@ -9,6 +9,7 @@ class GoogleAuthRequest(BaseModel):
     """Request for Google OAuth callback."""
     code: str
     redirect_uri: Optional[str] = None
+    requested_role: Optional[str] = "student"  # student or teacher
 
 
 class TokenResponse(BaseModel):

@@ -161,6 +161,110 @@ AI校長「生意君」は書籍「13歳からのアントレプレナーシッ�
 
 PDFファイルはGemini File APIにアップロードされ、チャット時に自動的に参照されます。
 
+### RAGの仕組み
+
+```
+docs/
+└── Diary_App_RAG_Gemini/
+    └── 13歳からのアントレプレナーシップ.pdf  ← RAG用PDF
+        ↓
+    Docker Volume マウント (../docs:/docs:ro)
+        ↓
+    backend/app/services/rag.py
+        ↓
+    Gemini File API にアップロード（48時間有効、24時間で自動更新）
+        ↓
+    AIチャット時に参照
+```
+
+### RAGデータの追加・変更方法
+
+#### 1. PDFファイルを配置
+
+```bash
+# プロジェクトルートに docs ディレクトリがあることを確認
+ls docs/Diary_App_RAG_Gemini/
+
+# 新しいPDFファイルを配置
+cp /path/to/your/book.pdf docs/Diary_App_RAG_Gemini/
+```
+
+#### 2. RAG設定ファイルを更新
+
+`backend/app/services/rag.py` を編集：
+
+```python
+# 18-20行目を変更
+PDF_FILE_PATH = "/docs/Diary_App_RAG_Gemini/新しいファイル名.pdf"
+PDF_DISPLAY_NAME = "new_book_name"  # Gemini上での識別名（英数字推奨）
+```
+
+#### 3. プロンプトを調整（任意）
+
+`backend/app/services/rag.py` の125-128行目で、AIへの指示を変更できます：
+
+```python
+contents.append(
+    "上記の書籍「新しい書籍名」の内容を参考に、"
+    "以下の質問に答えてください。書籍の内容を引用する場合は、"
+    "具体的なページや章を示してください。\n\n"
+)
+```
+
+#### 4. アプリケーションを再起動
+
+```bash
+cd backend
+docker-compose restart api
+```
+
+#### 5. RAGの初期化を確認
+
+```bash
+# ログでRAG初期化を確認
+docker-compose logs api | grep -i "rag\|pdf\|upload"
+
+# 成功時の出力例：
+# Uploading PDF from /docs/Diary_App_RAG_Gemini/新しいファイル名.pdf...
+# Waiting for file processing...
+# File uploaded successfully: files/xxxxx
+# RAG initialized with file: files/xxxxx
+```
+
+### 複数PDFの利用（上級）
+
+複数のPDFを使用する場合は、`rag.py` を拡張します：
+
+```python
+# 例: 複数ファイルの定義
+PDF_FILES = [
+    {
+        "path": "/docs/Diary_App_RAG_Gemini/book1.pdf",
+        "display_name": "book1",
+    },
+    {
+        "path": "/docs/Diary_App_RAG_Gemini/book2.pdf",
+        "display_name": "book2",
+    },
+]
+```
+
+### トラブルシューティング
+
+| 問題 | 原因 | 解決方法 |
+|------|------|----------|
+| RAGが動作しない | PDFファイルが見つからない | `docker-compose exec api ls -la /docs/` で確認 |
+| アップロードエラー | Gemini APIキー未設定 | `.env` の `GEMINI_API_KEY` を確認 |
+| 48時間後にエラー | ファイル期限切れ | 自動更新されるが、手動で `docker-compose restart api` |
+| PDFが大きすぎる | Gemini制限 | 20MB以下のPDFを使用、または分割 |
+
+### Gemini File APIの制限
+
+- **ファイルサイズ**: 最大 20MB（PDFの場合）
+- **有効期限**: アップロード後48時間
+- **自動更新**: 24時間経過で自動再アップロード
+- **対応形式**: PDF, テキスト, 画像など
+
 ## ライセンス
 
 Private

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, User, BookOpen, Flame, Calendar } from 'lucide-react';
 import {
@@ -10,7 +10,10 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
-import api from '../lib/api';
+import api, { parseApiError } from '../lib/api';
+import type { ApiError } from '../lib/api';
+import { CardSkeleton } from './ui/Loading';
+import { ErrorDisplay } from './ui/ErrorDisplay';
 
 interface AbilityCount {
   ability_id: string;
@@ -61,30 +64,32 @@ export default function TeacherStudentDetail() {
   const [student, setStudent] = useState<StudentDetail | null>(null);
   const [reports, setReports] = useState<ReportSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [studentRes, reportsRes] = await Promise.all([
-          api.get<StudentDetail>(`/dashboard/students/${studentId}`),
-          api.get<ReportSummary[]>(`/dashboard/students/${studentId}/reports`)
-        ]);
-        setStudent(studentRes.data);
-        setReports(reportsRes.data);
-      } catch (err: any) {
-        console.error('Failed to fetch student data:', err);
-        setError(err.response?.data?.detail || 'データの取得に失敗しました');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchData = useCallback(async () => {
+    if (!studentId) return;
 
-    if (studentId) {
-      fetchData();
+    try {
+      setLoading(true);
+      setError(null);
+      const [studentRes, reportsRes] = await Promise.all([
+        api.get<StudentDetail>(`/dashboard/students/${studentId}`),
+        api.get<ReportSummary[]>(`/dashboard/students/${studentId}/reports`)
+      ]);
+      setStudent(studentRes.data);
+      setReports(reportsRes.data);
+    } catch (err) {
+      const apiError = parseApiError(err);
+      setError(apiError);
+      console.error('Failed to fetch student data:', err);
+    } finally {
+      setLoading(false);
     }
   }, [studentId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -113,15 +118,57 @@ export default function TeacherStudentDetail() {
     }));
   };
 
+  // ローディング状態
   if (loading) {
     return (
-      <div className="bg-[#fef8f5] min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#59168b]"></div>
+      <div className="bg-[#fef8f5] min-h-screen p-6">
+        <div className="flex items-center gap-4 mb-6">
+          <button
+            onClick={() => navigate('/teacher/dashboard')}
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-white border border-[rgba(243,232,255,0.5)] hover:bg-purple-50"
+          >
+            <ArrowLeft className="w-5 h-5 text-[#59168b]" />
+          </button>
+          <h1 className="text-[18px] text-[#59168b] font-bold font-['Zen_Maru_Gothic',sans-serif]">
+            生徒詳細
+          </h1>
+        </div>
+        <div className="space-y-6">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
       </div>
     );
   }
 
-  if (error || !student) {
+  // エラー状態
+  if (error) {
+    return (
+      <div className="bg-[#fef8f5] min-h-screen p-6">
+        <div className="flex items-center gap-4 mb-6">
+          <button
+            onClick={() => navigate('/teacher/dashboard')}
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-white border border-[rgba(243,232,255,0.5)] hover:bg-purple-50"
+          >
+            <ArrowLeft className="w-5 h-5 text-[#59168b]" />
+          </button>
+          <h1 className="text-[18px] text-[#59168b] font-bold font-['Zen_Maru_Gothic',sans-serif]">
+            生徒詳細
+          </h1>
+        </div>
+        <ErrorDisplay
+          type={error.type}
+          message={error.message}
+          onRetry={fetchData}
+          onBack={() => navigate('/teacher/dashboard')}
+        />
+      </div>
+    );
+  }
+
+  // データなし
+  if (!student) {
     return (
       <div className="bg-[#fef8f5] min-h-screen p-6">
         <button
@@ -131,9 +178,11 @@ export default function TeacherStudentDetail() {
           <ArrowLeft className="w-5 h-5" />
           <span>戻る</span>
         </button>
-        <div className="bg-white rounded-[24px] p-6 text-center">
-          <p className="text-red-500">{error || '生徒が見つかりません'}</p>
-        </div>
+        <ErrorDisplay
+          type="notFound"
+          message="生徒が見つかりません"
+          onBack={() => navigate('/teacher/dashboard')}
+        />
       </div>
     );
   }

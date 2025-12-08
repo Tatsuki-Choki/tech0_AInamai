@@ -12,6 +12,7 @@ import TeacherStudentDetail from './components/TeacherStudentDetail';
 import ReviewDateSelection from './components/ReviewDateSelection';
 import ReviewDateDetail from './components/ReviewDateDetail';
 import ThemeCreateScreen from './components/ThemeCreateScreen';
+import { ToastProvider } from './components/ui/Toast';
 
 // 認証ガードコンポーネント（簡易版）
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -24,31 +25,33 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* 公開ルート */}
-        <Route path="/login" element={<StudentLogin />} />
-        <Route path="/student/login" element={<StudentLogin />} />
-        <Route path="/teacher/login" element={<TeacherLogin />} />
-        <Route path="/auth/callback" element={<GoogleCallback />} />
+    <ToastProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* 公開ルート */}
+          <Route path="/login" element={<StudentLogin />} />
+          <Route path="/student/login" element={<StudentLogin />} />
+          <Route path="/teacher/login" element={<TeacherLogin />} />
+          <Route path="/auth/callback" element={<GoogleCallback />} />
 
-        {/* 生徒用保護ルート */}
-        <Route path="/student/menu" element={<ProtectedRoute><StudentMenu /></ProtectedRoute>} />
-        <Route path="/student/theme/create" element={<ProtectedRoute><ThemeCreateScreen /></ProtectedRoute>} />
-        <Route path="/student/report" element={<ProtectedRoute><ReportScreen /></ProtectedRoute>} />
-        <Route path="/student/report/analysis" element={<ProtectedRoute><ReportAnalysisScreen /></ProtectedRoute>} />
-        <Route path="/student/report/complete" element={<ProtectedRoute><ReportCompleteScreen /></ProtectedRoute>} />
-        <Route path="/student/review" element={<ProtectedRoute><ReviewDateSelection /></ProtectedRoute>} />
-        <Route path="/student/review/:date" element={<ProtectedRoute><ReviewDateDetail /></ProtectedRoute>} />
+          {/* 生徒用保護ルート */}
+          <Route path="/student/menu" element={<ProtectedRoute><StudentMenu /></ProtectedRoute>} />
+          <Route path="/student/theme/create" element={<ProtectedRoute><ThemeCreateScreen /></ProtectedRoute>} />
+          <Route path="/student/report" element={<ProtectedRoute><ReportScreen /></ProtectedRoute>} />
+          <Route path="/student/report/analysis" element={<ProtectedRoute><ReportAnalysisScreen /></ProtectedRoute>} />
+          <Route path="/student/report/complete" element={<ProtectedRoute><ReportCompleteScreen /></ProtectedRoute>} />
+          <Route path="/student/review" element={<ProtectedRoute><ReviewDateSelection /></ProtectedRoute>} />
+          <Route path="/student/review/:date" element={<ProtectedRoute><ReviewDateDetail /></ProtectedRoute>} />
 
-        {/* 教師用保護ルート */}
-        <Route path="/teacher/dashboard" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
-        <Route path="/teacher/students/:studentId" element={<ProtectedRoute><TeacherStudentDetail /></ProtectedRoute>} />
-        
-        {/* デフォルトリダイレクト */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* 教師用保護ルート */}
+          <Route path="/teacher/dashboard" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
+          <Route path="/teacher/students/:studentId" element={<ProtectedRoute><TeacherStudentDetail /></ProtectedRoute>} />
+
+          {/* デフォルトリダイレクト */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ToastProvider>
   );
 }
 

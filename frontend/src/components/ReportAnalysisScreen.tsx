@@ -1,23 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Edit, Send } from 'lucide-react';
 import api from '../lib/api';
-
-interface Report {
-  id: string;
-  student_id: string;
-  content: string;
-  phase?: {
-    id: string;
-    name: string;
-  };
-  selected_abilities: Array<{
-    id: string;
-    name: string;
-  }>;
-  ai_comment?: string;
-  reported_at: string;
-}
 
 const imgAiAvatar = "/assets/ff72433a18795fbe8154f413cbac332dae84e27b.png";
 const imgBubble = "/assets/14ce80fda9a62b69285eb6835c5c005c4790d027.png";

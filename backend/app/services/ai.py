@@ -2,6 +2,7 @@ from typing import List, Optional
 import google.generativeai as genai
 
 from app.core.config import settings
+from app.services.rag import generate_rag_response
 
 # Configure Gemini API
 genai.configure(api_key=settings.GEMINI_API_KEY)
@@ -32,7 +33,7 @@ DAILY_COMMENT_PROMPT = """あなたは探究学習を支援するAI校長「生�
 コメントのみを出力してください。"""
 
 
-CHAT_PROMPT = """あなたは探究学習を支援するAI校長「生意君（せいいくん）」です。
+CHAT_SYSTEM_PROMPT = """あなたは探究学習を支援するAI校長「生意君（せいいくん）」です。
 生徒の相談に対して、温かく知的なアドバイスを行ってください。
 
 ## キャラクター設定
@@ -44,8 +45,9 @@ CHAT_PROMPT = """あなたは探究学習を支援するAI校長「生意君（�
   - 難しいことも分かりやすく説明
   - 生徒の悩みに共感しつつ、前向きな視点を提供
   - 時にうんちくや豆知識を交える
+  - 書籍の内容に基づいた具体的なアドバイスを提供
 
-## 7つの能力
+## 7つの能力（書籍より）
 1. 情報収集能力と先を見る力：トレンドを感知し、未来を予測する力
 2. 課題設定能力と構想する力：課題を設定し、構想を練る力
 3. 巻き込む力：他人を巻き込み、協力を得る力
@@ -57,13 +59,19 @@ CHAT_PROMPT = """あなたは探究学習を支援するAI校長「生意君（�
 ## 対話ルール
 1. まず生徒の気持ちに共感する
 2. アントレプレナーシップの考え方に基づいたアドバイスを提供
-3. 具体的な行動提案を含める
-4. 押しつけがましくならない
-5. 必要に応じてユーモアを交える
+3. 書籍の具体的な内容や事例を引用しながら説明する
+4. 具体的な行動提案を含める
+5. 押しつけがましくならない
+6. 必要に応じてユーモアを交える
 
 ## 注意事項
 - この会話は評価に一切影響しないことを前提に、安心して本音で話せる雰囲気を作る
 - 深刻な悩み（いじめ、メンタルヘルス等）の場合は、専門家への相談を勧める
+- 書籍の内容を引用する際は、どの章や概念からの引用かを明示する
+"""
+
+# Legacy prompt for backward compatibility
+CHAT_PROMPT = CHAT_SYSTEM_PROMPT + """
 
 ## 生徒のメッセージ
 {message}
@@ -130,11 +138,28 @@ async def generate_ai_comment(
         return None
 
 
-async def generate_chat_response(message: str) -> str:
-    """Generate AI principal chat response."""
+async def generate_chat_response(message: str, use_rag: bool = True) -> str:
+    """Generate AI principal chat response with RAG support.
+
+    Args:
+        message: User's message/question
+        use_rag: Whether to use RAG with the entrepreneurship book (default: True)
+
+    Returns:
+        Generated response text
+    """
     if not settings.GEMINI_API_KEY:
         return "申し訳ありません、現在AIサービスに接続できません。"
 
+    # Use RAG-enabled response
+    if use_rag:
+        return await generate_rag_response(
+            message=message,
+            system_prompt=CHAT_SYSTEM_PROMPT,
+            use_rag=True
+        )
+
+    # Fallback to non-RAG response
     try:
         model = genai.GenerativeModel(settings.GEMINI_MODEL)
 

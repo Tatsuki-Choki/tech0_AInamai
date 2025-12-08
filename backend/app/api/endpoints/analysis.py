@@ -1,7 +1,8 @@
 from typing import List, Optional
 from uuid import UUID
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from calendar import monthrange
+import sqlalchemy
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -110,6 +111,7 @@ async def get_report_calendar(
 ):
     """
     カレンダー表示用の報告済み日付リストを取得。
+    日本時間(UTC+9)で日付を計算する。
     """
     student = await get_student_from_user(db, current_user)
 
@@ -118,23 +120,28 @@ async def get_report_calendar(
     target_year = year or now.year
     target_month = month or now.month
 
-    # 月の初日と末日
+    # 月の初日と末日（UTC時間でクエリするため、日本時間の00:00はUTC前日15:00）
     _, last_day = monthrange(target_year, target_month)
-    start_date = date(target_year, target_month, 1)
-    end_date = date(target_year, target_month, last_day)
+    # 日本時間の月初00:00 = UTC前日15:00
+    start_utc = datetime(target_year, target_month, 1, 0, 0, 0) - timedelta(hours=9)
+    # 日本時間の月末23:59:59 = UTC同日14:59:59
+    end_utc = datetime(target_year, target_month, last_day, 23, 59, 59) - timedelta(hours=9)
 
-    # 日付ごとの報告数を集計
+    # 日付ごとの報告数を集計（UTC+9で日付を計算）
+    # PostgreSQLでタイムゾーン変換するための式を定義
+    jst_date_expr = func.date(Report.reported_at + sqlalchemy.text("interval '9 hours'"))
+
     result = await db.execute(
         select(
-            func.date(Report.reported_at).label("report_date"),
+            jst_date_expr.label("report_date"),
             func.count(Report.id).label("count")
         )
         .where(
             Report.student_id == student.id,
-            func.date(Report.reported_at) >= start_date,
-            func.date(Report.reported_at) <= end_date,
+            Report.reported_at >= start_utc,
+            Report.reported_at <= end_utc,
         )
-        .group_by(func.date(Report.reported_at))
+        .group_by(jst_date_expr)
     )
     rows = result.all()
 
@@ -241,8 +248,15 @@ async def get_reports_by_date(
 ):
     """
     特定の日付の報告を取得。
+    日本時間(UTC+9)で日付を計算する。
     """
     student = await get_student_from_user(db, current_user)
+
+    # 日本時間の00:00:00 - 23:59:59をUTCに変換
+    start_jst = datetime.combine(report_date, datetime.min.time())
+    end_jst = datetime.combine(report_date, datetime.max.time())
+    start_utc = start_jst - timedelta(hours=9)
+    end_utc = end_jst - timedelta(hours=9)
 
     result = await db.execute(
         select(Report)
@@ -252,7 +266,8 @@ async def get_reports_by_date(
         )
         .where(
             Report.student_id == student.id,
-            func.date(Report.reported_at) == report_date,
+            Report.reported_at >= start_utc,
+            Report.reported_at <= end_utc,
         )
         .order_by(Report.reported_at.desc())
     )
@@ -260,7 +275,7 @@ async def get_reports_by_date(
 
     return [
         {
-            "id": r.id,
+            "id": str(r.id),
             "content": r.content,
             "phase": r.phase.name if r.phase else None,
             "abilities": [ra.ability.name for ra in r.selected_abilities],

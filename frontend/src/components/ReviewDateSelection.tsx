@@ -3,13 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import api from '../lib/api';
 
-interface CalendarDate {
-  date: string; // "2025-12-06"
-  phase?: string;
+interface CalendarDateEntry {
+  date: string; // "2025-12-08"
+  report_count: number;
+}
+
+interface CalendarResponse {
+  dates: CalendarDateEntry[];
+  year: number;
+  month: number;
 }
 
 export default function ReviewDateSelection() {
-  const [dates, setDates] = useState<CalendarDate[]>([]);
+  const [dates, setDates] = useState<CalendarDateEntry[]>([]);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
   const navigate = useNavigate();
@@ -17,10 +23,10 @@ export default function ReviewDateSelection() {
   useEffect(() => {
     const fetchCalendar = async () => {
       try {
-        const response = await api.get<CalendarDate[]>('/reports/calendar', {
+        const response = await api.get<CalendarResponse>('/reports/calendar', {
           params: { year: currentYear, month: currentMonth }
         });
-        setDates(response.data);
+        setDates(response.data.dates || []);
       } catch (error) {
         console.error('Failed to fetch calendar:', error);
       }
@@ -127,11 +133,9 @@ export default function ReviewDateSelection() {
                       <p className="text-[#59168b] text-[16px] font-bold mb-1">
                         {new Date(item.date).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}
                       </p>
-                      {item.phase && (
-                        <p className="text-[rgba(173,70,255,0.7)] text-[14px]">
-                          {item.phase}
-                        </p>
-                      )}
+                      <p className="text-[rgba(173,70,255,0.7)] text-[14px]">
+                        {item.report_count}件の報告
+                      </p>
                     </div>
                   </div>
                 </button>

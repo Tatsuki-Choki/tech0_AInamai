@@ -23,22 +23,23 @@ const imgAiAvatar = "/assets/ff72433a18795fbe8154f413cbac332dae84e27b.png";
 const imgBubble = "/assets/14ce80fda9a62b69285eb6835c5c005c4790d027.png";
 
 interface AnalysisResult {
-  phase: { id: string; name: string };
-  abilities: { id: string; name: string; score: number }[];
-  comment: string;
+  suggested_phase: string;
+  suggested_phase_id: string;
+  suggested_abilities: { id: string; name: string; score: number; description?: string }[];
+  ai_comment: string;
 }
 
 export default function ReportAnalysisScreen() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { content } = location.state as { content: string } || { content: '' };
+  const { content, themeId } = location.state as { content: string; themeId: string } || { content: '', themeId: '' };
   
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!content) {
+    if (!content || !themeId) {
       navigate('/student/report');
       return;
     }
@@ -62,16 +63,16 @@ export default function ReportAnalysisScreen() {
   }, [content, navigate]);
 
   const handleSubmit = async () => {
-    if (!analysis) return;
-    
+    if (!analysis || !themeId) return;
+
     try {
       setIsSubmitting(true);
       // 報告データの保存
       await api.post('/reports', {
         content,
-        phase_id: analysis.phase.id,
-        abilities: analysis.abilities.map(a => ({ id: a.id, score: a.score })),
-        ai_comment: analysis.comment
+        theme_id: themeId,
+        phase_id: analysis.suggested_phase_id,
+        ability_ids: analysis.suggested_abilities.map(a => a.id),
       });
       navigate('/student/report/complete');
     } catch (error) {
@@ -116,7 +117,7 @@ export default function ReportAnalysisScreen() {
           </div>
           <div className="flex-1 bg-white border border-[rgba(198,210,255,0.5)] rounded-[24px] rounded-tl-[18px] p-4 shadow-sm">
             <p className="text-[#59168b] text-[14px] leading-relaxed font-['Zen_Maru_Gothic',sans-serif]">
-              {analysis.comment}
+              {analysis.ai_comment}
             </p>
           </div>
         </div>
@@ -131,7 +132,7 @@ export default function ReportAnalysisScreen() {
         <div className="bg-white border border-[rgba(243,232,255,0.5)] rounded-[24px] p-6 shadow-md mb-6">
           <h2 className="text-[#59168b] text-[16px] font-bold mb-4">探究学習のフェーズ</h2>
           <div className="bg-gradient-to-r from-[rgba(163,179,255,0.3)] to-[rgba(124,134,255,0.3)] border border-[#a3b3ff] rounded-[24px] py-3 px-6 inline-block relative">
-            <span className="text-[#59168b] font-bold">{analysis.phase.name}</span>
+            <span className="text-[#59168b] font-bold">{analysis.suggested_phase}</span>
             <img src={imgBubble} alt="" className="absolute -top-4 -right-4 w-12 h-12 opacity-50" />
           </div>
         </div>
@@ -140,7 +141,7 @@ export default function ReportAnalysisScreen() {
         <div className="bg-white border border-[rgba(243,232,255,0.5)] rounded-[24px] p-6 shadow-md mb-6">
           <h2 className="text-[#59168b] text-[16px] font-bold mb-4">発揮された能力</h2>
           <div className="flex flex-col gap-4">
-            {analysis.abilities.map((ability) => (
+            {analysis.suggested_abilities.map((ability) => (
               <div key={ability.id} className="relative">
                 <div className="absolute -top-2 left-0 bg-gradient-to-r from-[#ff637e] to-[#ff2056] text-white text-[10px] px-2 py-0.5 rounded-full">
                   {ability.score >= 80 ? '強く発揮' : '発揮'}

@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
+import logging
+import traceback
 
 from app.db.session import get_db
 from app.core.config import settings
@@ -9,6 +11,7 @@ from app.models import User
 from app.schemas.auth import GoogleAuthRequest, TokenResponse, UserResponse
 from app.services.auth import authenticate_with_google
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
@@ -41,11 +44,15 @@ async def google_callback(
         )
         return result
     except httpx.HTTPStatusError as e:
+        logger.error(f"Google HTTP error: {e.response.text}")
+        logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Failed to authenticate with Google: {e.response.text}",
         )
     except Exception as e:
+        logger.error(f"Authentication error: {str(e)}")
+        logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Authentication failed: {str(e)}",

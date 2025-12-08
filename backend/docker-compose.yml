@@ -21,6 +21,8 @@ services:
   api:
     build: .
     container_name: tankyu_diary_api
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://tankyu_user:tankyu_password@db:5432/tankyu_diary
     ports:

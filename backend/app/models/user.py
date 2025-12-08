@@ -19,7 +19,11 @@ class User(BaseModel):
     email = Column(String(255), unique=True, nullable=False, index=True)
     name = Column(String(255), nullable=False)
     avatar_url = Column(String(512), nullable=True)
-    role = Column(Enum(UserRole), nullable=False, default=UserRole.STUDENT)
+    role = Column(
+        Enum(UserRole, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=UserRole.STUDENT
+    )
     is_active = Column(Boolean, default=True, nullable=False)
 
     # Google OAuth info

@@ -19,7 +19,11 @@ class ResearchTheme(BaseModel):
     title = Column(String(500), nullable=False)
     description = Column(Text, nullable=True)
     fiscal_year = Column(Integer, nullable=False)
-    status = Column(Enum(ThemeStatus), default=ThemeStatus.IN_PROGRESS, nullable=False)
+    status = Column(
+        Enum(ThemeStatus, values_callable=lambda x: [e.value for e in x]),
+        default=ThemeStatus.IN_PROGRESS,
+        nullable=False
+    )
 
     # Relationships
     student = relationship("Student", back_populates="research_themes")

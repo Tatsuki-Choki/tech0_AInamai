@@ -10,6 +10,7 @@ import ReportCompleteScreen from './components/ReportCompleteScreen';
 import TeacherDashboard from './components/TeacherDashboard';
 import ReviewDateSelection from './components/ReviewDateSelection';
 import ReviewDateDetail from './components/ReviewDateDetail';
+import ThemeCreateScreen from './components/ThemeCreateScreen';
 
 // 認証ガードコンポーネント（簡易版）
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -32,6 +33,7 @@ function App() {
 
         {/* 生徒用保護ルート */}
         <Route path="/student/menu" element={<ProtectedRoute><StudentMenu /></ProtectedRoute>} />
+        <Route path="/student/theme/create" element={<ProtectedRoute><ThemeCreateScreen /></ProtectedRoute>} />
         <Route path="/student/report" element={<ProtectedRoute><ReportScreen /></ProtectedRoute>} />
         <Route path="/student/report/analysis" element={<ProtectedRoute><ReportAnalysisScreen /></ProtectedRoute>} />
         <Route path="/student/report/complete" element={<ProtectedRoute><ReportCompleteScreen /></ProtectedRoute>} />

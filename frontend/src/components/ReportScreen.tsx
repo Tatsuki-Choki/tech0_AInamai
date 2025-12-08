@@ -1,18 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Eraser, ArrowRight } from 'lucide-react';
+import api from '../lib/api';
 
 const imgAvatar = "/assets/14ce80fda9a62b69285eb6835c5c005c4790d027.png";
 
+interface Theme {
+  id: string;
+  title: string;
+}
+
 export default function ReportScreen() {
   const [content, setContent] = useState('');
+  const [theme, setTheme] = useState<Theme | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const fetchTheme = async () => {
+      try {
+        const response = await api.get('/themes/current');
+        setTheme(response.data);
+      } catch (error: any) {
+        if (error.response?.status === 404) {
+          // テーマがない場合は作成画面へ
+          navigate('/student/theme/create');
+          return;
+        }
+        console.error('Failed to fetch theme:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTheme();
+  }, [navigate]);
+
   const handleNext = () => {
-    if (!content.trim()) return;
-    // 次の画面（AI分析・確認画面）へ遷移し、入力内容を渡す
-    navigate('/student/report/analysis', { state: { content } });
+    if (!content.trim() || !theme) return;
+    // 次の画面（AI分析・確認画面）へ遷移し、入力内容とテーマIDを渡す
+    navigate('/student/report/analysis', { state: { content, themeId: theme.id } });
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#fef8f5]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#59168b]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#fef8f5] content-stretch flex flex-col items-start pb-0 pt-[24px] px-[20px] relative size-full min-h-screen">

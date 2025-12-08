@@ -1,0 +1,32 @@
+# FastAPI and server
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.19
+
+# Database
+sqlalchemy==2.0.36
+asyncpg==0.30.0
+alembic==1.14.0
+psycopg2-binary==2.9.10
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+authlib==1.4.0
+httpx==0.28.1
+
+# Validation and settings
+pydantic==2.10.3
+pydantic-settings==2.6.1
+email-validator==2.2.0
+
+# AI/LLM
+google-generativeai==0.8.3
+
+# Utilities
+python-dotenv==1.0.1
+python-dateutil==2.9.0
+
+# Development
+pytest==8.3.4
+pytest-asyncio==0.25.0

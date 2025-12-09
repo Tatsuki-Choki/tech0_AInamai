@@ -2,18 +2,19 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:15-alpine
+    image: mysql:8.0
     container_name: tankyu_diary_db
     environment:
-      POSTGRES_USER: tankyu_user
-      POSTGRES_PASSWORD: tankyu_password
-      POSTGRES_DB: tankyu_diary
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: tankyu_diary
+      MYSQL_ROOT_PASSWORD: rootpassword
     ports:
-      - "5433:5432"
+      - "3308:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tankyu_user -d tankyu_diary"]
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -24,7 +25,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://tankyu_user:tankyu_password@db:5432/tankyu_diary
+      DATABASE_URL: mysql+aiomysql://user:password@db:3306/tankyu_diary
     ports:
       - "8000:8000"
     depends_on:
@@ -36,4 +37,4 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
-  postgres_data:
+  mysql_data:

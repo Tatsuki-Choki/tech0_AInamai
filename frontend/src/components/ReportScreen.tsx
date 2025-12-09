@@ -52,22 +52,22 @@ export default function ReportScreen() {
   return (
     <div className="bg-[#fef8f5] content-stretch flex flex-col items-start pb-0 pt-[24px] px-[20px] relative size-full min-h-screen">
       <div className="bg-white border border-[rgba(243,232,255,0.5)] border-solid flex flex-col gap-[32px] h-full min-h-[767px] pb-px pt-[41px] px-[20px] relative rounded-[24px] shadow-lg w-full max-w-md mx-auto">
-        
+
         {/* ヘッダー部分 */}
         <div className="relative w-full">
-          <button 
+          <button
             onClick={() => navigate('/student/menu')}
             className="absolute left-0 top-0 flex items-center gap-1 text-[rgba(152,16,250,0.8)] font-['Zen_Maru_Gothic',sans-serif]"
           >
             <ChevronLeft className="w-5 h-5" />
             <span>メニューに戻る</span>
           </button>
-          
+
           <div className="mt-12 flex items-start gap-4">
             <div className="w-[77px] h-[69px] shrink-0">
-              <img 
-                alt="チャッピー生井" 
-                className="object-cover w-full h-full" 
+              <img
+                alt="アンプくん"
+                className="object-cover w-full h-full"
                 src={imgAvatar}
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = 'https://placehold.co/77x69/purple/white?text=Avatar';
@@ -81,7 +81,7 @@ export default function ReportScreen() {
             </div>
           </div>
           <p className="absolute top-8 left-0 text-[12px] text-[rgba(152,16,250,0.7)] font-['Zen_Maru_Gothic',sans-serif]">
-            チャッピー生井
+            アンプくん
           </p>
         </div>
 
@@ -107,20 +107,20 @@ export default function ReportScreen() {
           </div>
 
           <div className="flex gap-4 h-[58px] mt-auto mb-8">
-            <button 
+            <button
               onClick={() => setContent('')}
               className="flex-1 flex items-center justify-center gap-2 bg-[rgba(250,245,255,0.5)] border border-[rgba(243,232,255,0.5)] rounded-[24px] hover:bg-purple-50 transition-colors"
             >
               <Eraser className="w-5 h-5 text-[#8200db]" />
               <span className="text-[#8200db] font-['Zen_Maru_Gothic',sans-serif]">クリア</span>
             </button>
-            
-            <button 
+
+            <button
               onClick={handleNext}
               disabled={!content.trim()}
               className={`flex-1 flex items-center justify-center gap-2 rounded-[24px] shadow-md transition-all ${
-                content.trim() 
-                  ? 'bg-gradient-to-r from-[#a3b3ff] to-[#7c86ff] text-white hover:opacity-90' 
+                content.trim()
+                  ? 'bg-gradient-to-r from-[#a3b3ff] to-[#7c86ff] text-white hover:opacity-90'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
@@ -134,4 +134,3 @@ export default function ReportScreen() {
     </div>
   );
 }
-

@@ -15,15 +15,32 @@ const GoogleIcon = () => (
 
 export default function StudentLogin() {
   const [googleLoginUrl, setGoogleLoginUrl] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchLoginUrl = async () => {
       try {
+        setLoading(true);
+        setError(null);
         // 生徒用ログインなので role=student を渡す
         const response = await api.get('/auth/google/login?role=student');
-        setGoogleLoginUrl(response.data.auth_url);
-      } catch (error) {
+        const authUrl = response.data.auth_url;
+        
+        // Google OAuth設定が不完全な場合のチェック
+        if (authUrl.includes('your-google-client-id')) {
+          setError('Google OAuthの設定が完了していません。管理者に連絡してください。');
+          setGoogleLoginUrl('');
+        } else {
+          setGoogleLoginUrl(authUrl);
+        }
+      } catch (error: any) {
         console.error('Login URL fetch error:', error);
+        const errorMessage = error.response?.data?.detail || error.message || 'ログインURLの取得に失敗しました';
+        setError(errorMessage);
+        setGoogleLoginUrl('');
+      } finally {
+        setLoading(false);
       }
     };
     fetchLoginUrl();
@@ -32,6 +49,8 @@ export default function StudentLogin() {
   const handleLogin = () => {
     if (googleLoginUrl) {
       window.location.href = googleLoginUrl;
+    } else {
+      setError('ログインURLが取得できませんでした。ページを再読み込みしてください。');
     }
   };
 
@@ -44,13 +63,31 @@ export default function StudentLogin() {
             探究学習日記
           </p>
 
-          <button
-            onClick={handleLogin}
-            className="flex items-center justify-center gap-3 bg-white border border-gray-300 rounded-full px-6 py-3 shadow-md hover:bg-gray-50 transition-colors w-full max-w-xs"
-          >
-            <GoogleIcon />
-            <span className="font-medium text-gray-700">Googleでログイン</span>
-          </button>
+          {loading ? (
+            <div className="flex items-center justify-center gap-3 bg-gray-100 border border-gray-300 rounded-full px-6 py-3 w-full max-w-xs">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
+              <span className="font-medium text-gray-600">読み込み中...</span>
+            </div>
+          ) : (
+            <button
+              onClick={handleLogin}
+              disabled={!googleLoginUrl}
+              className={`flex items-center justify-center gap-3 border rounded-full px-6 py-3 shadow-md transition-colors w-full max-w-xs ${
+                googleLoginUrl
+                  ? 'bg-white border-gray-300 hover:bg-gray-50'
+                  : 'bg-gray-100 border-gray-300 cursor-not-allowed opacity-50'
+              }`}
+            >
+              <GoogleIcon />
+              <span className="font-medium text-gray-700">Googleでログイン</span>
+            </button>
+          )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 w-full max-w-xs">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
 
           <div className="text-center">
             <p className="text-sm text-gray-500">

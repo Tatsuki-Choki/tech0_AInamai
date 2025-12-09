@@ -24,6 +24,8 @@ class StudentSummary(BaseModel):
     max_streak: int
     last_report_date: Optional[date] = None
     is_primary: bool = False
+    seminar_lab_id: Optional[UUID] = None
+    seminar_lab_name: Optional[str] = None
 
 
 class StudentDetail(StudentSummary):
@@ -42,3 +44,25 @@ class ReportSummary(BaseModel):
 class PaginatedResponse(BaseModel):
     data: List
     pagination: dict
+
+
+class AbilityInfo(BaseModel):
+    """能力情報."""
+    id: UUID
+    name: str
+    display_order: int
+
+
+class ScatterDataPoint(BaseModel):
+    """散布図用のデータポイント."""
+    student_id: UUID
+    student_name: str
+    grade: Optional[int] = None
+    class_name: Optional[str] = None
+    ability_scores: dict[str, int]  # ability_id -> count
+
+
+class ScatterDataResponse(BaseModel):
+    """散布図APIのレスポンス."""
+    abilities: List[AbilityInfo]
+    data_points: List[ScatterDataPoint]

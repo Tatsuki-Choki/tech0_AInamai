@@ -40,5 +40,11 @@ class GoogleUserInfo(BaseModel):
     picture: Optional[str] = None
 
 
+class PasswordLoginRequest(BaseModel):
+    """Request for password-based login."""
+    email: str
+    password: str
+
+
 # Update forward reference
 TokenResponse.model_rebuild()

@@ -1,7 +1,21 @@
-from sqlalchemy import Column, String, Integer, Boolean, Text
+from sqlalchemy import Column, String, Integer, Boolean, Text, ForeignKey
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel
+from app.models.base import BaseModel, UUID36
+
+
+class SeminarLab(BaseModel):
+    """ゼミ・ラボマスタ."""
+    __tablename__ = "seminar_labs"
+
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    teacher_id = Column(UUID36, ForeignKey("teachers.id"), nullable=True)  # 担当教師
+    is_active = Column(Boolean, default=True, nullable=False)
+
+    # Relationships
+    teacher = relationship("Teacher", back_populates="seminar_labs")
+    students = relationship("Student", back_populates="seminar_lab")
 
 
 class Ability(BaseModel):

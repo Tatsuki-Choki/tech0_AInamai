@@ -5,9 +5,9 @@ const imgSuccess = "/assets/a8939bc33b9d034667ad9d4463f43536e688f710.png";
 
 export default function ReportCompleteScreen() {
   const navigate = useNavigate();
-  const today = new Date().toLocaleDateString('ja-JP', { 
-    year: 'numeric', 
-    month: 'long', 
+  const today = new Date().toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
     day: 'numeric',
     weekday: 'long'
   });
@@ -15,7 +15,7 @@ export default function ReportCompleteScreen() {
   return (
     <div className="bg-[#fef8f5] content-stretch flex flex-col items-start pb-0 pt-[81.5px] px-[20px] relative size-full min-h-screen">
       <div className="bg-white border border-[rgba(243,232,255,0.5)] border-solid h-[648px] relative rounded-[24px] shadow-lg shrink-0 w-full max-w-md mx-auto flex flex-col items-center justify-center p-8">
-        
+
         {/* 成功アイコン */}
         <div className="absolute left-1/2 -translate-x-1/2 top-[40px] rounded-full size-[96px] bg-green-50 flex items-center justify-center">
           <CheckCircle className="w-12 h-12 text-green-500" />
@@ -47,9 +47,9 @@ export default function ReportCompleteScreen() {
 
         {/* 画像 */}
         <div className="absolute bottom-[100px] right-[40px] w-[105px] h-[110px] opacity-50">
-          <img 
-            src={imgSuccess} 
-            alt="Success" 
+          <img
+            src={imgSuccess}
+            alt="Success"
             className="object-contain w-full h-full"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
@@ -70,4 +70,3 @@ export default function ReportCompleteScreen() {
     </div>
   );
 }
-

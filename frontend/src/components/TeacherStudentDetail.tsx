@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, User, BookOpen, Flame, Calendar } from 'lucide-react';
+import { ArrowLeft, User, BookOpen, Flame, Calendar, Building2, Loader2, Check } from 'lucide-react';
 import {
   Radar,
   RadarChart,
@@ -36,6 +36,15 @@ interface StudentDetail {
   last_report_date?: string;
   is_primary: boolean;
   ability_counts: AbilityCount[];
+  seminar_lab_id?: string;
+  seminar_lab_name?: string;
+}
+
+interface SeminarLab {
+  id: string;
+  name: string;
+  description?: string;
+  is_active: boolean;
 }
 
 interface ReportSummary {
@@ -65,6 +74,9 @@ export default function TeacherStudentDetail() {
   const [reports, setReports] = useState<ReportSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
+  const [seminarLabs, setSeminarLabs] = useState<SeminarLab[]>([]);
+  const [savingLab, setSavingLab] = useState(false);
+  const [labSaveSuccess, setLabSaveSuccess] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!studentId) return;
@@ -72,12 +84,14 @@ export default function TeacherStudentDetail() {
     try {
       setLoading(true);
       setError(null);
-      const [studentRes, reportsRes] = await Promise.all([
+      const [studentRes, reportsRes, labsRes] = await Promise.all([
         api.get<StudentDetail>(`/dashboard/students/${studentId}`),
-        api.get<ReportSummary[]>(`/dashboard/students/${studentId}/reports`)
+        api.get<ReportSummary[]>(`/dashboard/students/${studentId}/reports`),
+        api.get<SeminarLab[]>('/master/seminar-labs')
       ]);
       setStudent(studentRes.data);
       setReports(reportsRes.data);
+      setSeminarLabs(labsRes.data);
     } catch (err) {
       const apiError = parseApiError(err);
       setError(apiError);
@@ -86,6 +100,32 @@ export default function TeacherStudentDetail() {
       setLoading(false);
     }
   }, [studentId]);
+
+  const handleSeminarLabChange = async (labId: string) => {
+    if (!student) return;
+
+    setSavingLab(true);
+    setLabSaveSuccess(false);
+    try {
+      await api.put(`/master/students/${student.id}/seminar-lab`, null, {
+        params: { seminar_lab_id: labId || null }
+      });
+      // Update local state
+      const selectedLab = seminarLabs.find(lab => lab.id === labId);
+      setStudent({
+        ...student,
+        seminar_lab_id: labId || undefined,
+        seminar_lab_name: selectedLab?.name || undefined,
+      });
+      setLabSaveSuccess(true);
+      setTimeout(() => setLabSaveSuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to update seminar lab:', err);
+      alert('ゼミ/ラボの変更に失敗しました');
+    } finally {
+      setSavingLab(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -217,6 +257,33 @@ export default function TeacherStudentDetail() {
             <p className="text-[14px] text-[rgba(152,16,250,0.7)]">
               {student.grade ? `${student.grade}年` : ''} {student.class_name || ''}
             </p>
+          </div>
+        </div>
+
+        {/* ゼミ/ラボ割り当て */}
+        <div className="bg-purple-50 rounded-[16px] p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-[#59168b]" />
+              <span className="text-[14px] font-bold text-[#59168b]">ゼミ/ラボ</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {savingLab && <Loader2 className="w-4 h-4 animate-spin text-purple-500" />}
+              {labSaveSuccess && <Check className="w-4 h-4 text-green-500" />}
+              <select
+                value={student.seminar_lab_id || ''}
+                onChange={(e) => handleSeminarLabChange(e.target.value)}
+                disabled={savingLab}
+                className="px-3 py-1.5 text-[14px] text-[#59168b] bg-white border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50"
+              >
+                <option value="">未割り当て</option>
+                {seminarLabs.map((lab) => (
+                  <option key={lab.id} value={lab.id}>
+                    {lab.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 

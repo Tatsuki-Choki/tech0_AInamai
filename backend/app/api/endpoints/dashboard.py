@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, case
 from sqlalchemy.orm import selectinload
 
 from app.db.session import get_db
@@ -11,13 +11,16 @@ from app.core.config import settings
 from app.core.security import get_current_teacher_or_admin
 from app.models import (
     User, Student, Teacher, StudentTeacher, Report, ReportAbility,
-    Ability, ResearchTheme, ResearchPhase, StreakRecord
+    Ability, ResearchTheme, ResearchPhase, StreakRecord, SeminarLab
 )
 from app.schemas.dashboard import (
     StudentSummary,
     StudentDetail,
     AbilityCount,
     ReportSummary,
+    AbilityInfo,
+    ScatterDataPoint,
+    ScatterDataResponse,
 )
 
 router = APIRouter(prefix="/dashboard", tags=["Teacher Dashboard"])
@@ -47,7 +50,10 @@ async def get_students_summary(
     # Get all student relations
     result = await db.execute(
         select(StudentTeacher)
-        .options(selectinload(StudentTeacher.student).selectinload(Student.user))
+        .options(
+            selectinload(StudentTeacher.student).selectinload(Student.user),
+            selectinload(StudentTeacher.student).selectinload(Student.seminar_lab),
+        )
         .where(
             StudentTeacher.teacher_id == teacher.id,
             StudentTeacher.fiscal_year == year,
@@ -106,6 +112,8 @@ async def get_students_summary(
             max_streak=streak.max_streak if streak else 0,
             last_report_date=streak.last_report_date if streak else None,
             is_primary=rel.is_primary,
+            seminar_lab_id=student.seminar_lab_id,
+            seminar_lab_name=student.seminar_lab.name if student.seminar_lab else None,
         ))
 
     return students_summary
@@ -137,7 +145,10 @@ async def get_student_detail(
     # Get student
     result = await db.execute(
         select(Student)
-        .options(selectinload(Student.user))
+        .options(
+            selectinload(Student.user),
+            selectinload(Student.seminar_lab),
+        )
         .where(Student.id == student_id)
     )
     student = result.scalar_one_or_none()
@@ -177,13 +188,13 @@ async def get_student_detail(
     )
     latest_report = result.scalar_one_or_none()
 
-    # Get ability counts (include all abilities, even with 0 count)
+    # Get ability counts (include all abilities, even with 0 count) - MySQL compatible
     result = await db.execute(
         select(
             Ability.id,
             Ability.name,
             Ability.display_order,
-            func.count(ReportAbility.id).filter(Report.student_id == student.id)
+            func.sum(case((Report.student_id == student.id, 1), else_=0))
         )
         .outerjoin(ReportAbility, ReportAbility.ability_id == Ability.id)
         .outerjoin(Report, Report.id == ReportAbility.report_id)
@@ -192,7 +203,7 @@ async def get_student_detail(
         .order_by(Ability.display_order)
     )
     ability_counts = [
-        AbilityCount(ability_id=row[0], ability_name=row[1], count=row[3] or 0)
+        AbilityCount(ability_id=row[0], ability_name=row[1], count=int(row[3] or 0))
         for row in result.all()
     ]
 
@@ -210,6 +221,8 @@ async def get_student_detail(
         max_streak=streak.max_streak if streak else 0,
         last_report_date=streak.last_report_date if streak else None,
         is_primary=relation.is_primary,
+        seminar_lab_id=student.seminar_lab_id,
+        seminar_lab_name=student.seminar_lab.name if student.seminar_lab else None,
         ability_counts=ability_counts,
     )
 
@@ -263,3 +276,73 @@ async def get_student_reports(
         )
         for r in reports
     ]
+
+
+@router.get("/scatter-data", response_model=ScatterDataResponse)
+async def get_scatter_data(
+    current_user: User = Depends(get_current_teacher_or_admin),
+    db: AsyncSession = Depends(get_db),
+    fiscal_year: Optional[int] = None,
+):
+    """Get scatter plot data for all assigned students with ability scores."""
+    teacher = await get_teacher_profile(db, current_user)
+    year = fiscal_year or settings.get_current_fiscal_year()
+
+    # Get all abilities (7つの能力)
+    result = await db.execute(
+        select(Ability)
+        .where(Ability.is_active == True)
+        .order_by(Ability.display_order)
+    )
+    abilities = result.scalars().all()
+    ability_info_list = [
+        AbilityInfo(
+            id=a.id,
+            name=a.name,
+            display_order=a.display_order,
+        )
+        for a in abilities
+    ]
+
+    # Get all student relations
+    result = await db.execute(
+        select(StudentTeacher)
+        .options(selectinload(StudentTeacher.student).selectinload(Student.user))
+        .where(
+            StudentTeacher.teacher_id == teacher.id,
+            StudentTeacher.fiscal_year == year,
+            StudentTeacher.is_active == True,
+        )
+    )
+    relations = result.scalars().all()
+
+    data_points = []
+    for rel in relations:
+        student = rel.student
+        user = student.user
+
+        # Get ability counts for this student (MySQL compatible)
+        result = await db.execute(
+            select(
+                Ability.id,
+                func.sum(case((Report.student_id == student.id, 1), else_=0))
+            )
+            .outerjoin(ReportAbility, ReportAbility.ability_id == Ability.id)
+            .outerjoin(Report, Report.id == ReportAbility.report_id)
+            .where(Ability.is_active == True)
+            .group_by(Ability.id)
+        )
+        ability_scores = {str(row[0]): int(row[1] or 0) for row in result.all()}
+
+        data_points.append(ScatterDataPoint(
+            student_id=student.id,
+            student_name=user.name,
+            grade=student.grade,
+            class_name=student.class_name,
+            ability_scores=ability_scores,
+        ))
+
+    return ScatterDataResponse(
+        abilities=ability_info_list,
+        data_points=data_points,
+    )

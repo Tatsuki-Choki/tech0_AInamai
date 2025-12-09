@@ -4,34 +4,60 @@ import os
 import time
 from pathlib import Path
 from typing import Optional
-import google.generativeai as genai
 
 from app.core.config import settings
 
-# Configure Gemini API
-genai.configure(api_key=settings.GEMINI_API_KEY)
+# Lazy import and configuration for Gemini
+genai = None
+_genai_configured = False
 
 # Cache for uploaded file reference
-_uploaded_file: Optional[genai.types.File] = None
+_uploaded_file = None
 _file_upload_time: float = 0
 
-# PDF file path inside Docker container
-PDF_FILE_PATH = "/docs/Diary_App_RAG_Gemini/13歳からのアントレプレナーシップ.pdf"
+# PDF file path - use environment variable or default
+PDF_FILE_PATH = os.environ.get(
+    "RAG_PDF_PATH",
+    "/docs/Diary_App_RAG_Gemini/13歳からのアントレプレナーシップ.pdf"
+)
 PDF_DISPLAY_NAME = "entrepreneurship_book"
 
 # File expiry time (Gemini files expire after 48 hours, refresh after 24 hours)
 FILE_REFRESH_SECONDS = 24 * 60 * 60
 
 
-def get_uploaded_file() -> Optional[genai.types.File]:
+def _configure_genai():
+    """Lazily configure Gemini API."""
+    global genai, _genai_configured
+
+    if _genai_configured:
+        return genai is not None
+
+    _genai_configured = True
+
+    if not settings.GEMINI_API_KEY:
+        print("GEMINI_API_KEY not configured, RAG service disabled")
+        return False
+
+    try:
+        import google.generativeai as _genai
+        _genai.configure(api_key=settings.GEMINI_API_KEY)
+        genai = _genai
+        print("Gemini API configured successfully")
+        return True
+    except Exception as e:
+        print(f"Failed to configure Gemini API: {e}")
+        return False
+
+
+def get_uploaded_file():
     """Get or upload the PDF file to Gemini.
 
     Returns the file reference for use in content generation.
     """
     global _uploaded_file, _file_upload_time
 
-    if not settings.GEMINI_API_KEY:
-        print("GEMINI_API_KEY not configured")
+    if not _configure_genai():
         return None
 
     # Check if file is still valid
@@ -48,7 +74,7 @@ def get_uploaded_file() -> Optional[genai.types.File]:
 
     # Check if PDF exists
     if not os.path.exists(PDF_FILE_PATH):
-        print(f"PDF file not found at {PDF_FILE_PATH}")
+        print(f"PDF file not found at {PDF_FILE_PATH} (RAG disabled)")
         return None
 
     # Check for existing uploaded files with the same display name
@@ -106,7 +132,7 @@ async def generate_rag_response(
     Returns:
         Generated response text
     """
-    if not settings.GEMINI_API_KEY:
+    if not _configure_genai():
         return "申し訳ありません、現在AIサービスに接続できません。"
 
     try:

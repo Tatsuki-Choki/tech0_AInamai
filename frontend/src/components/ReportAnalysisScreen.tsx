@@ -17,7 +17,7 @@ export default function ReportAnalysisScreen() {
   const location = useLocation();
   const navigate = useNavigate();
   const { content, themeId } = location.state as { content: string; themeId: string } || { content: '', themeId: '' };
-  
+
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,9 +81,9 @@ export default function ReportAnalysisScreen() {
   return (
     <div className="bg-[#fef8f5] relative size-full min-h-screen pb-8">
       <div className="max-w-md mx-auto px-[20px] pt-[40px]">
-        
+
         {/* ヘッダー */}
-        <button 
+        <button
           onClick={() => navigate('/student/report')}
           className="flex items-center gap-1 text-[rgba(152,16,250,0.8)] font-['Zen_Maru_Gothic',sans-serif] mb-6"
         >
@@ -91,10 +91,10 @@ export default function ReportAnalysisScreen() {
           <span>戻る</span>
         </button>
 
-        {/* チャッピーからのメッセージ */}
+        {/* アンプくんからのメッセージ */}
         <div className="flex gap-4 mb-6">
           <div className="w-[98px] shrink-0 flex flex-col items-center gap-2">
-            <span className="text-[12px] text-[rgba(152,16,250,0.7)]">チャッピー生井</span>
+            <span className="text-[12px] text-[rgba(152,16,250,0.7)]">アンプくん</span>
             <div className="w-[80px] h-[80px]">
               <img src={imgAiAvatar} alt="AI" className="object-contain w-full h-full" />
             </div>
@@ -109,7 +109,7 @@ export default function ReportAnalysisScreen() {
         {/* 分析結果ラベル */}
         <div className="flex items-center gap-2 mb-4">
           <div className="w-2 h-2 bg-[#8200db] rounded-full"></div>
-          <span className="text-[#8200db] text-[14px] font-bold">チャッピー生井 分析結果</span>
+          <span className="text-[#8200db] text-[14px] font-bold">アンプくん 分析結果</span>
         </div>
 
         {/* フェーズカード */}
@@ -142,8 +142,8 @@ export default function ReportAnalysisScreen() {
         <div className="bg-white border border-[rgba(243,232,255,0.5)] rounded-[24px] p-6 shadow-md mb-8">
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-[#59168b] text-[16px] font-bold">進捗内容</h2>
-            <button 
-              onClick={() => navigate('/student/report')} 
+            <button
+              onClick={() => navigate('/student/report')}
               className="flex items-center gap-1 text-[rgba(152,16,250,0.8)] text-[14px]"
             >
               <Edit className="w-4 h-4" />
@@ -175,4 +175,3 @@ export default function ReportAnalysisScreen() {
     </div>
   );
 }
-

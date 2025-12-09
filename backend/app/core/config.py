@@ -1,15 +1,22 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore",
+    )
+
     # App settings
     APP_NAME: str = "探究学習日記アプリ API"
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
 
-    # Database
-    DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/tankyu_diary"
+    # Database (MySQL)
+    DATABASE_URL: str = "mysql+aiomysql://user:password@localhost:3306/tankyu_diary"
     DATABASE_ECHO: bool = False
 
     # JWT Authentication
@@ -38,10 +45,6 @@ class Settings(BaseSettings):
         if now.month >= 4:
             return now.year
         return now.year - 1
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
 
 
 settings = Settings()

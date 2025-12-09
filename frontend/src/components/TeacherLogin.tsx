@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 
 // GoogleロゴのSVGコンポーネント
@@ -14,16 +15,39 @@ const GoogleIcon = () => (
 );
 
 export default function TeacherLogin() {
+  const navigate = useNavigate();
   const [googleLoginUrl, setGoogleLoginUrl] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // テストログイン用の状態
+  const [showTestLogin, setShowTestLogin] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [testPassword, setTestPassword] = useState('');
+  const [testLoginLoading, setTestLoginLoading] = useState(false);
 
   useEffect(() => {
     const fetchLoginUrl = async () => {
       try {
+        setLoading(true);
+        setError(null);
         // 教師用ログインなので role=teacher を渡す
         const response = await api.get('/auth/google/login?role=teacher');
-        setGoogleLoginUrl(response.data.auth_url);
-      } catch (error) {
+        const authUrl = response.data.auth_url;
+
+        if (authUrl.includes('your-google-client-id')) {
+          setError('Google OAuthの設定が完了していません。管理者に連絡してください。');
+          setGoogleLoginUrl('');
+        } else {
+          setGoogleLoginUrl(authUrl);
+        }
+      } catch (error: any) {
         console.error('Login URL fetch error:', error);
+        const errorMessage = error.response?.data?.detail || error.message || 'ログインURLの取得に失敗しました';
+        setError(errorMessage);
+        setGoogleLoginUrl('');
+      } finally {
+        setLoading(false);
       }
     };
     fetchLoginUrl();
@@ -32,25 +56,120 @@ export default function TeacherLogin() {
   const handleLogin = () => {
     if (googleLoginUrl) {
       window.location.href = googleLoginUrl;
+    } else {
+      setError('ログインURLが取得できませんでした。ページを再読み込みしてください。');
+    }
+  };
+
+  const handleTestLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setTestLoginLoading(true);
+
+    try {
+      const response = await api.post('/auth/login', {
+        email: testEmail,
+        password: testPassword,
+      });
+
+      // トークンとユーザー情報を保存
+      localStorage.setItem('access_token', response.data.access_token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+
+      // ロールに応じてリダイレクト
+      if (response.data.user.role === 'teacher' || response.data.user.role === 'admin') {
+        navigate('/teacher/dashboard');
+      } else {
+        navigate('/student/menu');
+      }
+    } catch (error: any) {
+      console.error('Test login error:', error);
+      const errorMessage = error.response?.data?.detail || 'ログインに失敗しました';
+      setError(errorMessage);
+    } finally {
+      setTestLoginLoading(false);
     }
   };
 
   return (
-    <div className="bg-[#fef8f5] content-stretch flex flex-col items-start pb-0 pt-[48.5px] px-[186px] relative size-full min-h-screen">
-      <div className="bg-white border border-[rgba(243,232,255,0.5)] border-solid content-stretch flex flex-col gap-[8px] h-[714px] items-center justify-center pb-px pt-[25px] px-[25px] relative rounded-[24px] shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] shrink-0 w-full max-w-md mx-auto mt-10">
-        
-        <div className="flex flex-col items-center gap-8 w-full px-8">
+    <div className="bg-[#fef8f5] content-stretch flex flex-col items-start pb-0 pt-[48.5px] px-[20px] relative size-full min-h-screen">
+      <div className="bg-white border border-[rgba(243,232,255,0.5)] border-solid content-stretch flex flex-col gap-[8px] min-h-[714px] items-center justify-center pb-8 pt-[25px] px-[25px] relative rounded-[24px] shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] shrink-0 w-full max-w-md mx-auto mt-10">
+
+        <div className="flex flex-col items-center gap-6 w-full px-8">
           <p className="font-['Zen_Maru_Gothic',sans-serif] text-[20px] text-[#59168b] text-center font-bold">
             教師用ログイン
           </p>
-          
-          <button
-            onClick={handleLogin}
-            className="flex items-center justify-center gap-3 bg-white border border-gray-300 rounded-full px-6 py-3 shadow-md hover:bg-gray-50 transition-colors w-full max-w-xs"
-          >
-            <GoogleIcon />
-            <span className="font-medium text-gray-700">Googleでログイン</span>
-          </button>
+
+          {loading ? (
+            <div className="flex items-center justify-center gap-3 bg-gray-100 border border-gray-300 rounded-full px-6 py-3 w-full max-w-xs">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
+              <span className="font-medium text-gray-600">読み込み中...</span>
+            </div>
+          ) : (
+            <button
+              onClick={handleLogin}
+              disabled={!googleLoginUrl}
+              className={`flex items-center justify-center gap-3 border rounded-full px-6 py-3 shadow-md transition-colors w-full max-w-xs ${
+                googleLoginUrl
+                  ? 'bg-white border-gray-300 hover:bg-gray-50'
+                  : 'bg-gray-100 border-gray-300 cursor-not-allowed opacity-50'
+              }`}
+            >
+              <GoogleIcon />
+              <span className="font-medium text-gray-700">Googleでログイン</span>
+            </button>
+          )}
+
+          {/* テストアカウントログイン */}
+          <div className="w-full max-w-xs">
+            <button
+              onClick={() => setShowTestLogin(!showTestLogin)}
+              className="text-sm text-gray-400 hover:text-gray-600 transition-colors w-full text-center"
+            >
+              {showTestLogin ? 'テストログインを閉じる' : 'テストアカウントでログイン'}
+            </button>
+
+            {showTestLogin && (
+              <form onSubmit={handleTestLogin} className="mt-4 space-y-3">
+                <div>
+                  <input
+                    type="email"
+                    placeholder="メールアドレス"
+                    value={testEmail}
+                    onChange={(e) => setTestEmail(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-200 text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <input
+                    type="password"
+                    placeholder="パスワード"
+                    value={testPassword}
+                    onChange={(e) => setTestPassword(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-200 text-sm"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={testLoginLoading}
+                  className="w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium disabled:opacity-50"
+                >
+                  {testLoginLoading ? 'ログイン中...' : 'ログイン'}
+                </button>
+                <p className="text-xs text-gray-400 text-center">
+                  テスト用: teacher@test.com / teacher123
+                </p>
+              </form>
+            )}
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 w-full max-w-xs">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
 
           <div className="text-center">
             <p className="text-sm text-gray-500">
@@ -62,4 +181,3 @@ export default function TeacherLogin() {
     </div>
   );
 }
-

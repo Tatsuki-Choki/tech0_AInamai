@@ -1,9 +1,8 @@
 import enum
 from sqlalchemy import Column, String, Text, Integer, Enum, ForeignKey, DateTime, Date
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID
 
-from app.models.base import BaseModel
+from app.models.base import BaseModel, UUID36
 
 
 class ThemeStatus(str, enum.Enum):
@@ -15,7 +14,7 @@ class ResearchTheme(BaseModel):
     """探究テーマ（生徒1人につき年度ごとに1つ）."""
     __tablename__ = "research_themes"
 
-    student_id = Column(UUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
+    student_id = Column(UUID36, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     title = Column(String(500), nullable=False)
     description = Column(Text, nullable=True)
     fiscal_year = Column(Integer, nullable=False)
@@ -34,9 +33,9 @@ class Report(BaseModel):
     """日々の報告（日記）."""
     __tablename__ = "reports"
 
-    student_id = Column(UUID(as_uuid=True), ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
-    theme_id = Column(UUID(as_uuid=True), ForeignKey("research_themes.id", ondelete="CASCADE"), nullable=False)
-    phase_id = Column(UUID(as_uuid=True), ForeignKey("research_phases.id"), nullable=True)
+    student_id = Column(UUID36, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
+    theme_id = Column(UUID36, ForeignKey("research_themes.id", ondelete="CASCADE"), nullable=False)
+    phase_id = Column(UUID36, ForeignKey("research_phases.id"), nullable=True)
 
     content = Column(Text, nullable=False)  # 報告内容（原文）
     ai_comment = Column(Text, nullable=True)  # AIからの一言コメント
@@ -53,8 +52,8 @@ class ReportAbility(BaseModel):
     """報告×能力の中間テーブル."""
     __tablename__ = "report_abilities"
 
-    report_id = Column(UUID(as_uuid=True), ForeignKey("reports.id", ondelete="CASCADE"), nullable=False)
-    ability_id = Column(UUID(as_uuid=True), ForeignKey("abilities.id", ondelete="CASCADE"), nullable=False)
+    report_id = Column(UUID36, ForeignKey("reports.id", ondelete="CASCADE"), nullable=False)
+    ability_id = Column(UUID36, ForeignKey("abilities.id", ondelete="CASCADE"), nullable=False)
 
     # Relationships
     report = relationship("Report", back_populates="selected_abilities")

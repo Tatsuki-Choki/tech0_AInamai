@@ -59,7 +59,7 @@ export default function StudentMenu() {
             {/* アバター画像 */}
             <div className="w-[128px] h-[128px]">
               <img 
-                alt="チャッピー生井" 
+                alt="アンプくん" 
                 className="object-contain w-full h-full" 
                 src={imgImage}
                 // アセットがない場合のフォールバック
@@ -70,7 +70,7 @@ export default function StudentMenu() {
             </div>
             <div className="absolute bottom-0 w-full text-center">
               <p className="font-['Zen_Maru_Gothic',sans-serif] text-[#8200db] text-[16px]">
-                チャッピー生井と探求学習を進めよう
+                アンプくんと探求学習を進めよう
               </p>
             </div>
           </div>

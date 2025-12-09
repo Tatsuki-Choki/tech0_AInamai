@@ -1,194 +1,216 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, LogOut, ChevronDown } from 'lucide-react';
-import api, { parseApiError } from '../lib/api';
-import type { ApiError } from '../lib/api';
-import { ListSkeleton } from './ui/Loading';
-import { ErrorDisplay } from './ui/ErrorDisplay';
+import { Users, LogOut, Loader2, ChevronRight, Building2 } from 'lucide-react';
+import api from '../lib/api';
+import ScatterPlot from './ScatterPlot';
 
-interface Student {
+interface StudentSummary {
   id: string;
   user_id: string;
   name: string;
   email: string;
-  grade?: number;
-  class_name?: string;
-  theme_title?: string;
-  current_phase?: string;
+  grade: number | null;
+  class_name: string | null;
+  theme_title: string | null;
+  current_phase: string | null;
   total_reports: number;
   current_streak: number;
   max_streak: number;
-  last_report_date?: string;
+  last_report_date: string | null;
   is_primary: boolean;
 }
 
 export default function TeacherDashboard() {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
   const navigate = useNavigate();
-
-  const fetchStudents = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await api.get<Student[]>('/dashboard/students');
-      setStudents(response.data);
-    } catch (err) {
-      const apiError = parseApiError(err);
-      setError(apiError);
-      console.error('Failed to fetch students:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [students, setStudents] = useState<StudentSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('');
 
   useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
-
-  const handleLogout = async () => {
-    try {
-      await api.post('/auth/logout');
-    } finally {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      navigate('/teacher/login');
+    // Get user name from localStorage
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setUserName(user.name || '');
+      } catch {
+        // ignore
+      }
     }
+
+    // Fetch students
+    const fetchStudents = async () => {
+      try {
+        const response = await api.get<StudentSummary[]>('/dashboard/students');
+        setStudents(response.data);
+      } catch (err) {
+        console.error('Failed to fetch students:', err);
+        setError('生徒データの取得に失敗しました');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudents();
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
+    navigate('/login');
   };
 
-  const filteredStudents = students.filter(student =>
-    student.name.includes(searchTerm) || (student.class_name && student.class_name.includes(searchTerm))
-  );
+  const handleStudentClick = (studentId: string) => {
+    navigate(`/teacher/student/${studentId}`);
+  };
 
   return (
-    <div className="bg-[#fef8f5] relative size-full min-h-screen p-6">
-
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 bg-purple-100 rounded-2xl flex items-center justify-center">
-            <div className="w-5 h-5 bg-purple-300 rounded-full" />
+    <div className="min-h-screen bg-[#fef8f5]">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-4 shadow-lg">
+        <div className="max-w-6xl mx-auto flex justify-between items-center">
+          <div>
+            <h1 className="text-xl font-bold">教師ダッシュボード</h1>
+            <p className="text-purple-200 text-sm">{userName}先生</p>
           </div>
-          <h1 className="text-[18px] text-[#59168b] font-bold font-['Zen_Maru_Gothic',sans-serif]">
-            教師用ダッシュボード
-          </h1>
-        </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 px-4 py-2 rounded-[24px] border border-[rgba(243,232,255,0.5)] bg-[rgba(250,245,255,0.5)] hover:bg-purple-50 transition-colors"
-        >
-          <LogOut className="w-4 h-4 text-[#8200db]" />
-          <span className="text-[#8200db] text-[14px]">ログアウト</span>
-        </button>
-      </div>
-
-      {/* メインコンテンツ */}
-      <div className="bg-white rounded-[24px] border border-[rgba(243,232,255,0.5)] shadow-lg p-4 min-h-[80vh]">
-
-        {/* 検索・フィルター */}
-        <div className="flex flex-col gap-4 mb-6">
-          <div className="relative w-full">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-300" />
-            <input
-              type="text"
-              placeholder="生徒の名前で検索..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-[58px] pl-14 pr-4 rounded-[24px] border border-[rgba(233,212,255,0.5)] bg-white text-[16px] focus:outline-none focus:ring-2 focus:ring-purple-200 placeholder-[rgba(218,178,255,0.6)]"
-            />
-          </div>
-
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            <button className="flex items-center justify-between px-4 h-[43px] min-w-[117px] bg-white border border-[rgba(233,212,255,0.5)] rounded-[16px] text-sm text-gray-600">
-              <span>クラス</span>
-              <ChevronDown className="w-4 h-4" />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/teacher/seminar-labs')}
+              className="flex items-center gap-2 px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
+            >
+              <Building2 className="w-4 h-4" />
+              <span className="text-sm">ゼミ・研究室</span>
             </button>
-            <button className="flex items-center justify-between px-4 h-[43px] min-w-[121px] bg-white border border-[rgba(233,212,255,0.5)] rounded-[16px] text-sm text-gray-600">
-              <span>フェーズ</span>
-              <ChevronDown className="w-4 h-4" />
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm">ログアウト</span>
             </button>
           </div>
         </div>
+      </header>
 
-        {/* エラー表示 */}
-        {error && (
-          <ErrorDisplay
-            type={error.type}
-            message={error.message}
-            onRetry={fetchStudents}
-          />
-        )}
+      <main className="max-w-6xl mx-auto px-6 py-8">
+        {/* Scatter Plot Section */}
+        <section className="mb-8">
+          <ScatterPlot onStudentClick={handleStudentClick} />
+        </section>
 
-        {/* ローディング表示 */}
-        {loading && !error && (
-          <div className="py-4">
-            <ListSkeleton count={5} />
+        {/* Students List Section */}
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-5 h-5 text-purple-600" />
+            <h2 className="text-lg font-bold text-gray-800">担当生徒一覧</h2>
+            <span className="text-sm text-gray-500">({students.length}名)</span>
           </div>
-        )}
 
-        {/* コンテンツ表示 */}
-        {!loading && !error && (
-          <>
-            {/* 検索結果カウント */}
-            <p className="text-[16px] text-[rgba(152,16,250,0.6)] mb-4 pl-1">
-              {filteredStudents.length}件の生徒が見つかりました
-            </p>
-
-            {/* 生徒リスト */}
-            {filteredStudents.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-400">
-                  {searchTerm ? '検索条件に一致する生徒がいません' : '担当の生徒がいません'}
-                </p>
+          {loading ? (
+            <div className="bg-white rounded-xl shadow-md p-8 flex justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+            </div>
+          ) : error ? (
+            <div className="bg-white rounded-xl shadow-md p-8 text-center">
+              <p className="text-red-500">{error}</p>
+            </div>
+          ) : students.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-md p-8 text-center">
+              <p className="text-gray-500">担当生徒がいません</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow-md overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        生徒名
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        学年・組
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        探究テーマ
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        フェーズ
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        報告数
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        連続
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        最終報告
+                      </th>
+                      <th className="px-4 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {students.map((student) => (
+                      <tr
+                        key={student.id}
+                        onClick={() => handleStudentClick(student.id)}
+                        className="hover:bg-purple-50 cursor-pointer transition-colors"
+                      >
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                              {student.name.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-800">{student.name}</p>
+                              <p className="text-xs text-gray-500">{student.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className="text-sm text-gray-600">
+                            {student.grade && student.class_name
+                              ? `${student.grade}年 ${student.class_name}組`
+                              : '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className="text-sm text-gray-800 line-clamp-1">
+                            {student.theme_title || '未設定'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          {student.current_phase ? (
+                            <span className="inline-flex px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700 rounded-full">
+                              {student.current_phase}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <span className="font-medium text-gray-800">{student.total_reports}</span>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <span className="font-medium text-orange-500">{student.current_streak}日</span>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <span className="text-sm text-gray-500">
+                            {student.last_report_date || '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {filteredStudents.map((student) => (
-                  <button
-                    key={student.id}
-                    onClick={() => navigate(`/teacher/students/${student.id}`)}
-                    className="w-full bg-white border border-[rgba(243,232,255,0.5)] rounded-[16px] p-4 hover:bg-purple-50 transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-4 mb-3">
-                      <h3 className="text-[16px] font-bold text-[#59168b] w-[80px]">{student.name}</h3>
-                      <span className="text-[14px] text-[rgba(152,16,250,0.7)] w-[60px]">{student.class_name || '-'}</span>
-
-                      {/* テーマバッジ */}
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className="w-4 h-4 bg-purple-200 rounded-full shrink-0" />
-                        <span className="text-[14px] text-[#6e11b0] truncate">{student.theme_title || '未設定'}</span>
-                      </div>
-                    </div>
-
-                    {/* ステータス情報 */}
-                    <div className="grid grid-cols-4 gap-2 text-[12px] pl-4 border-t border-gray-100 pt-2">
-                      <div>
-                        <span className="text-gray-400 block">フェーズ:</span>
-                        <span className="text-[#59168b] font-medium">{student.current_phase || '未設定'}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 block">報告数:</span>
-                        <span className="text-[#59168b] font-medium">{student.total_reports}件</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 block">連続:</span>
-                        <span className="text-[#59168b] font-medium">{student.current_streak}日</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 block">最終報告:</span>
-                        <span className="text-[#59168b] font-medium">{student.last_report_date || '-'}</span>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-      </div>
+            </div>
+          )}
+        </section>
+      </main>
     </div>
   );
 }

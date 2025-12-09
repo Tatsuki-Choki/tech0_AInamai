@@ -11,9 +11,15 @@ from app.services.rag import initialize_rag
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
-    print("Initializing RAG service...")
-    initialize_rag()
-    print("RAG service initialization complete.")
+    print("Starting application...")
+    try:
+        print("Initializing RAG service...")
+        initialize_rag()
+        print("RAG service initialization complete.")
+    except Exception as e:
+        print(f"Warning: RAG initialization failed (non-critical): {e}")
+        # Continue anyway - RAG is optional
+    print("Application started successfully.")
     yield
     # Shutdown
     print("Shutting down application...")

@@ -3,6 +3,7 @@ from typing import Optional
 import uuid
 
 import httpx
+from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -10,6 +11,19 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.models import User, UserRole, Student, Teacher, StreakRecord
 from app.schemas.auth import GoogleUserInfo, TokenResponse, UserResponse
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against its hash."""
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def get_password_hash(password: str) -> str:
+    """Generate password hash."""
+    return pwd_context.hash(password)
 
 
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -155,6 +169,54 @@ async def authenticate_with_google(
 
     # Get or create user
     user = await get_or_create_user(db, google_info, requested_role or "student")
+
+    # Create JWT access token
+    access_token = create_access_token(
+        data={
+            "sub": str(user.id),
+            "email": user.email,
+            "role": user.role.value,
+        }
+    )
+
+    return TokenResponse(
+        access_token=access_token,
+        token_type="bearer",
+        expires_in=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        user=UserResponse(
+            id=user.id,
+            email=user.email,
+            name=user.name,
+            avatar_url=user.avatar_url,
+            role=user.role,
+        ),
+    )
+
+
+async def authenticate_with_password(
+    db: AsyncSession,
+    email: str,
+    password: str,
+) -> Optional[TokenResponse]:
+    """Authenticate user with email and password."""
+    # Find user by email
+    result = await db.execute(
+        select(User).where(User.email == email)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        return None
+
+    # Check password
+    if not user.password_hash:
+        return None
+
+    if not verify_password(password, user.password_hash):
+        return None
+
+    if not user.is_active:
+        return None
 
     # Create JWT access token
     access_token = create_access_token(

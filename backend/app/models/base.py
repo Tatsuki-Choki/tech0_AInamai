@@ -1,9 +1,28 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, DateTime
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, DateTime, String, TypeDecorator
 
 from app.db.session import Base
+
+
+class UUID36(TypeDecorator):
+    """Platform-independent UUID type using CHAR(36) for MySQL compatibility."""
+    impl = String(36)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            if isinstance(value, uuid.UUID):
+                return str(value)
+            return value
+        return None
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            if not isinstance(value, uuid.UUID):
+                return uuid.UUID(value)
+            return value
+        return None
 
 
 class TimestampMixin:
@@ -14,7 +33,7 @@ class TimestampMixin:
 
 class UUIDMixin:
     """Mixin for adding UUID primary key."""
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID36, primary_key=True, default=lambda: str(uuid.uuid4()))
 
 
 class BaseModel(Base, UUIDMixin, TimestampMixin):

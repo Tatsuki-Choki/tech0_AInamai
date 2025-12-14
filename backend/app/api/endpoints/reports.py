@@ -1,8 +1,11 @@
 from typing import List, Optional
+import os
+import shutil
+import uuid
 from uuid import UUID
 from datetime import datetime, date
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
@@ -80,6 +83,33 @@ async def update_streak(db: AsyncSession, student_id: UUID) -> None:
         streak.updated_at = datetime.utcnow()
 
 
+@router.post("/upload", response_model=dict)
+async def upload_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_student),
+):
+    """Upload an image file."""
+    # Validate file type
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    
+    # Create upload directory if not exists
+    upload_dir = "static/uploads"
+    if not os.path.exists(upload_dir):
+        os.makedirs(upload_dir)
+    
+    # Save file
+    file_ext = os.path.splitext(file.filename)[1]
+    file_name = f"{uuid.uuid4()}{file_ext}"
+    file_path = os.path.join(upload_dir, file_name)
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    # Return URL
+    return {"url": f"/static/uploads/{file_name}"}
+
+
 @router.get("/", response_model=List[ReportListResponse])
 async def get_reports(
     current_user: User = Depends(get_current_student),
@@ -111,6 +141,7 @@ async def get_reports(
         ReportListResponse(
             id=r.id,
             content=r.content,
+            image_url=r.image_url,
             phase=ResearchPhaseResponse(
                 id=r.phase.id,
                 name=r.phase.name,
@@ -170,6 +201,7 @@ async def create_report(
         theme_id=report_data.theme_id,
         phase_id=report_data.phase_id,
         content=report_data.content,
+        image_url=report_data.image_url,
         reported_at=datetime.utcnow(),
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
@@ -223,6 +255,7 @@ async def create_report(
         student_id=report.student_id,
         theme_id=report.theme_id,
         content=report.content,
+        image_url=report.image_url,
         phase=ResearchPhaseResponse(
             id=report.phase.id,
             name=report.phase.name,
@@ -289,6 +322,7 @@ async def get_report(
         student_id=report.student_id,
         theme_id=report.theme_id,
         content=report.content,
+        image_url=report.image_url,
         phase=ResearchPhaseResponse(
             id=report.phase.id,
             name=report.phase.name,
@@ -330,6 +364,9 @@ async def update_report(
 
     if update_data.content is not None:
         report.content = update_data.content
+
+    if update_data.image_url is not None:
+        report.image_url = update_data.image_url
 
     if update_data.phase_id is not None:
         result = await db.execute(
@@ -382,6 +419,7 @@ async def update_report(
         student_id=report.student_id,
         theme_id=report.theme_id,
         content=report.content,
+        image_url=report.image_url,
         phase=ResearchPhaseResponse(
             id=report.phase.id,
             name=report.phase.name,

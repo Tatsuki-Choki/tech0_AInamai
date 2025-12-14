@@ -35,8 +35,11 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-2.0-flash"
     GEMINI_FILE_SEARCH_STORE_ID: str = "fileSearchStores/principalphilosophy-ydwhy17rmp7m"
 
+    # Frontend URL (for OAuth redirect)
+    FRONTEND_URL: str = "http://localhost:3000"
+
     # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:3001"]
 
     # Fiscal year (Japanese school year: April to March)
     def get_current_fiscal_year(self) -> int:

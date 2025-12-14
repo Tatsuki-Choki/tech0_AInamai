@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.db.session import get_db
 from app.core.config import settings
 from app.core.security import get_current_user, get_current_teacher_or_admin
-from app.models import User, Ability, ResearchPhase, SeminarLab, Student, Teacher
+from app.models import User, Ability, ResearchPhase, SeminarLab, Student, Teacher, Book
 from app.schemas.research import (
     AbilityResponse,
     ResearchPhaseResponse,
@@ -17,6 +17,11 @@ from app.schemas.research import (
     SeminarLabUpdate,
     SeminarLabResponse,
     SeminarLabListResponse,
+)
+from app.schemas.master import (
+    BookCreate,
+    BookUpdate,
+    BookResponse,
 )
 
 router = APIRouter(prefix="/master", tags=["Master Data"])
@@ -92,6 +97,83 @@ async def get_current_fiscal_year(
 ):
     """Get current fiscal year."""
     return {"fiscal_year": settings.get_current_fiscal_year()}
+
+
+# ============ Book Endpoints ============
+
+@router.get("/books", response_model=List[BookResponse])
+async def get_books(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all books."""
+    result = await db.execute(
+        select(Book).where(Book.is_active == True).order_by(Book.title)
+    )
+    return result.scalars().all()
+
+
+@router.post("/books", response_model=BookResponse)
+async def create_book(
+    book_data: BookCreate,
+    current_user: User = Depends(get_current_teacher_or_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new book. Teacher only."""
+    new_book = Book(
+        title=book_data.title,
+        author=book_data.author,
+        publisher=book_data.publisher,
+        description=book_data.description,
+        isbn=book_data.isbn,
+        cover_image_url=book_data.cover_image_url,
+        recommended_comment=book_data.recommended_comment,
+        is_active=True,
+    )
+    db.add(new_book)
+    await db.commit()
+    await db.refresh(new_book)
+    return new_book
+
+
+@router.put("/books/{book_id}", response_model=BookResponse)
+async def update_book(
+    book_id: UUID,
+    book_data: BookUpdate,
+    current_user: User = Depends(get_current_teacher_or_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update a book."""
+    result = await db.execute(select(Book).where(Book.id == book_id))
+    book = result.scalar_one_or_none()
+    
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+        
+    for field, value in book_data.model_dump(exclude_unset=True).items():
+        setattr(book, field, value)
+        
+    await db.commit()
+    await db.refresh(book)
+    return book
+
+
+@router.delete("/books/{book_id}")
+async def delete_book(
+    book_id: UUID,
+    current_user: User = Depends(get_current_teacher_or_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete (deactivate) a book."""
+    result = await db.execute(select(Book).where(Book.id == book_id))
+    book = result.scalar_one_or_none()
+    
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+        
+    book.is_active = False
+    await db.commit()
+    return {"message": "Book deactivated successfully"}
 
 
 # ============ SeminarLab Endpoints ============

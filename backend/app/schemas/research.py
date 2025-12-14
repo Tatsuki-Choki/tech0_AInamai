@@ -58,6 +58,7 @@ class ResearchPhaseResponse(BaseModel):
 # Report Schemas
 class ReportCreate(BaseModel):
     content: str
+    image_url: Optional[str] = None
     theme_id: UUID
     phase_id: Optional[UUID] = None
     ability_ids: List[UUID] = []  # Selected abilities
@@ -65,6 +66,7 @@ class ReportCreate(BaseModel):
 
 class ReportUpdate(BaseModel):
     content: Optional[str] = None
+    image_url: Optional[str] = None
     phase_id: Optional[UUID] = None
     ability_ids: Optional[List[UUID]] = None
 
@@ -82,6 +84,7 @@ class ReportResponse(BaseModel):
     student_id: UUID
     theme_id: UUID
     content: str
+    image_url: Optional[str] = None
     phase: Optional[ResearchPhaseResponse] = None
     selected_abilities: List[ReportAbilityResponse] = []
     ai_comment: Optional[str] = None
@@ -96,6 +99,7 @@ class ReportResponse(BaseModel):
 class ReportListResponse(BaseModel):
     id: UUID
     content: str
+    image_url: Optional[str] = None
     phase: Optional[ResearchPhaseResponse] = None
     ability_count: int
     ai_comment: Optional[str] = None

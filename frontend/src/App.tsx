@@ -6,6 +6,8 @@ import StudentMenu from './components/StudentMenu';
 import ReportScreen from './components/ReportScreen';
 import ReportAnalysisScreen from './components/ReportAnalysisScreen';
 import ReportCompleteScreen from './components/ReportCompleteScreen';
+import StudentReviewCalendar from './components/StudentReviewCalendar';
+import StudentReportDetail from './components/StudentReportDetail';
 import TeacherDashboard from './components/TeacherDashboard';
 import TeacherStudentDetail from './components/TeacherStudentDetail';
 import ThemeCreateScreen from './components/ThemeCreateScreen';
@@ -73,7 +75,6 @@ function GoogleCallback() {
     const handleCallback = async () => {
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
-      const role = params.get('role');
       const error = params.get('error');
 
       if (error) {
@@ -153,18 +154,6 @@ function GoogleCallback() {
   return null;
 }
 
-// 仮の振り返り画面コンポーネント（後で実装）
-function StudentReview() {
-  return (
-    <div className="min-h-screen bg-[#fef8f5] p-8">
-      <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold text-purple-800 mb-6">振り返り</h1>
-        <p className="text-gray-600">振り返り画面は現在開発中です</p>
-      </div>
-    </div>
-  );
-}
-
 function App() {
   return (
     <BrowserRouter>
@@ -211,7 +200,15 @@ function App() {
           path="/student/review"
           element={
             <ProtectedRoute allowedRoles={['student']}>
-              <StudentReview />
+              <StudentReviewCalendar />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/review/:reportId"
+          element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <StudentReportDetail />
             </ProtectedRoute>
           }
         />

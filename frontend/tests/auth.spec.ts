@@ -4,7 +4,7 @@ test.describe('Authentication', () => {
 
   test.describe('Student Login Page', () => {
     test('should display student login UI elements', async ({ page }) => {
-      await page.goto('http://localhost:5173/login');
+      await page.goto('http://localhost:3001/login');
       await page.waitForLoadState('networkidle');
 
       await expect(page.getByText('探究学習日記')).toBeVisible();
@@ -13,7 +13,7 @@ test.describe('Authentication', () => {
     });
 
     test('should have accessible Google login button', async ({ page }) => {
-      await page.goto('http://localhost:5173/login');
+      await page.goto('http://localhost:3001/login');
       await page.waitForLoadState('networkidle');
 
       const googleButton = page.getByRole('button', { name: /Googleでログイン/i });
@@ -24,7 +24,7 @@ test.describe('Authentication', () => {
 
   test.describe('Teacher Login Page', () => {
     test('should display teacher login UI elements', async ({ page }) => {
-      await page.goto('http://localhost:5173/teacher/login');
+      await page.goto('http://localhost:3001/teacher/login');
       await page.waitForLoadState('networkidle');
 
       await expect(page.getByText('教師用ログイン')).toBeVisible();
@@ -35,7 +35,7 @@ test.describe('Authentication', () => {
     });
 
     test('should have properly styled login card', async ({ page }) => {
-      await page.goto('http://localhost:5173/teacher/login');
+      await page.goto('http://localhost:3001/teacher/login');
       await page.waitForLoadState('networkidle');
 
       await expect(page.getByText('教師用ログイン')).toBeVisible();
@@ -46,30 +46,30 @@ test.describe('Authentication', () => {
 
   test.describe('Protected Routes', () => {
     test.beforeEach(async ({ page }) => {
-      await page.goto('http://localhost:5173');
+      await page.goto('http://localhost:3001');
       await page.evaluate(() => localStorage.clear());
     });
 
     test('should redirect to login when accessing student menu without token', async ({ page }) => {
-      await page.goto('http://localhost:5173/student/menu');
+      await page.goto('http://localhost:3001/student/menu');
       await page.waitForURL('**/login', { timeout: 10000 });
       expect(page.url()).toContain('/login');
     });
 
     test('should redirect to login when accessing report without token', async ({ page }) => {
-      await page.goto('http://localhost:5173/student/report');
+      await page.goto('http://localhost:3001/student/report');
       await page.waitForURL('**/login', { timeout: 10000 });
       expect(page.url()).toContain('/login');
     });
 
     test('should redirect to login when accessing teacher dashboard without token', async ({ page }) => {
-      await page.goto('http://localhost:5173/teacher/dashboard');
+      await page.goto('http://localhost:3001/teacher/dashboard');
       await page.waitForURL('**/login', { timeout: 10000 });
       expect(page.url()).toContain('/login');
     });
 
     test('should redirect to login when accessing review page without token', async ({ page }) => {
-      await page.goto('http://localhost:5173/student/review');
+      await page.goto('http://localhost:3001/student/review');
       await page.waitForURL('**/login', { timeout: 10000 });
       expect(page.url()).toContain('/login');
     });
@@ -77,13 +77,13 @@ test.describe('Authentication', () => {
 
   test.describe('Navigation', () => {
     test('should navigate from root to login page', async ({ page }) => {
-      await page.goto('http://localhost:5173/');
+      await page.goto('http://localhost:3001/');
       await page.waitForURL('**/login', { timeout: 10000 });
       expect(page.url()).toContain('/login');
     });
 
     test('should access teacher login directly', async ({ page }) => {
-      await page.goto('http://localhost:5173/teacher/login');
+      await page.goto('http://localhost:3001/teacher/login');
       await page.waitForLoadState('networkidle');
       expect(page.url()).toContain('/teacher/login');
       await expect(page.getByText('教師用ログイン')).toBeVisible();
@@ -103,7 +103,7 @@ test.describe('Authentication', () => {
         });
       });
 
-      await page.goto('http://localhost:5173/teacher/login');
+      await page.goto('http://localhost:3001/teacher/login');
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(1000);
 
@@ -122,7 +122,7 @@ test.describe('Authentication', () => {
         });
       });
 
-      await page.goto('http://localhost:5173/teacher/login');
+      await page.goto('http://localhost:3001/teacher/login');
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(1000);
 
@@ -149,14 +149,14 @@ test.describe('Authentication', () => {
         });
       });
 
-      await page.goto('http://localhost:5173/auth/callback?code=mock_code&state=cm9sZT1zdHVkZW50');
+      await page.goto('http://localhost:3001/auth/callback?code=mock_code&state=cm9sZT1zdHVkZW50');
 
       // Check for loading state before response arrives
       await expect(page.getByText('認証中...')).toBeVisible({ timeout: 2000 });
     });
 
     test('should redirect to login if no code is provided', async ({ page }) => {
-      await page.goto('http://localhost:5173/auth/callback');
+      await page.goto('http://localhost:3001/auth/callback');
       await page.waitForURL('**/login', { timeout: 10000 });
       expect(page.url()).toContain('/login');
     });
@@ -165,7 +165,7 @@ test.describe('Authentication', () => {
   test.describe('Responsive Design', () => {
     test('should display correctly on mobile viewport', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('http://localhost:5173/teacher/login');
+      await page.goto('http://localhost:3001/teacher/login');
       await page.waitForLoadState('networkidle');
 
       await expect(page.getByText('教師用ログイン')).toBeVisible();
@@ -174,7 +174,7 @@ test.describe('Authentication', () => {
 
     test('should display correctly on desktop viewport', async ({ page }) => {
       await page.setViewportSize({ width: 1920, height: 1080 });
-      await page.goto('http://localhost:5173/teacher/login');
+      await page.goto('http://localhost:3001/teacher/login');
       await page.waitForLoadState('networkidle');
 
       await expect(page.getByText('教師用ログイン')).toBeVisible();

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, User, BookOpen, Flame, Calendar, Building2, Loader2, Check } from 'lucide-react';
+import { ArrowLeft, User, BookOpen, Flame, Calendar, Building2, Loader2, Check, ExternalLink } from 'lucide-react';
 import {
   Radar,
   RadarChart,
@@ -47,6 +47,15 @@ interface SeminarLab {
   is_active: boolean;
 }
 
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  description?: string;
+  cover_image_url?: string;
+  recommended_comment?: string;
+}
+
 interface ReportSummary {
   id: string;
   content: string;
@@ -75,6 +84,7 @@ export default function TeacherStudentDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
   const [seminarLabs, setSeminarLabs] = useState<SeminarLab[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
   const [savingLab, setSavingLab] = useState(false);
   const [labSaveSuccess, setLabSaveSuccess] = useState(false);
 
@@ -84,14 +94,16 @@ export default function TeacherStudentDetail() {
     try {
       setLoading(true);
       setError(null);
-      const [studentRes, reportsRes, labsRes] = await Promise.all([
+      const [studentRes, reportsRes, labsRes, booksRes] = await Promise.all([
         api.get<StudentDetail>(`/dashboard/students/${studentId}`),
         api.get<ReportSummary[]>(`/dashboard/students/${studentId}/reports`),
-        api.get<SeminarLab[]>('/master/seminar-labs')
+        api.get<SeminarLab[]>('/master/seminar-labs'),
+        api.get<Book[]>('/master/books')
       ]);
       setStudent(studentRes.data);
       setReports(reportsRes.data);
       setSeminarLabs(labsRes.data);
+      setBooks(booksRes.data);
     } catch (err) {
       const apiError = parseApiError(err);
       setError(apiError);
@@ -405,6 +417,52 @@ export default function TeacherStudentDetail() {
           <div className="text-center py-8">
             <p className="text-gray-400">まだ報告がないため、能力データがありません</p>
           </div>
+        )}
+      </div>
+
+      {/* 指導支援・推薦図書 (新規追加) */}
+      <div className="bg-white rounded-[24px] border border-[rgba(243,232,255,0.5)] shadow-lg p-6 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+            <BookOpen className="w-5 h-5 text-[#59168b]" />
+            <h3 className="text-[16px] font-bold text-[#59168b]">指導アドバイス・推薦図書</h3>
+        </div>
+        
+        {books.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4">
+                <p className="text-[13px] text-gray-600 mb-2">
+                    マーケティングアントレプレナーシップコーナーの以下の図書が生徒の成長に役立つ可能性があります。
+                </p>
+                {/* 簡易的にランダムまたは最初の1冊を表示するロジック（将来的には能力に応じて推薦を変える） */}
+                {books.slice(0, 3).map((book) => (
+                    <div key={book.id} className="flex gap-4 border border-purple-100 rounded-xl p-3 bg-purple-50/30">
+                        {book.cover_image_url ? (
+                            <img 
+                                src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8000'}${book.cover_image_url}`} 
+                                alt={book.title} 
+                                className="w-16 h-24 object-cover rounded-md shadow-sm flex-shrink-0"
+                            />
+                        ) : (
+                            <div className="w-16 h-24 bg-gray-200 rounded-md flex items-center justify-center flex-shrink-0">
+                                <BookOpen className="w-6 h-6 text-gray-400" />
+                            </div>
+                        )}
+                        <div>
+                            <h4 className="font-bold text-[#59168b] text-[14px] mb-1">{book.title}</h4>
+                            <p className="text-[11px] text-gray-500 mb-2">{book.author}</p>
+                            <p className="text-[12px] text-gray-700 line-clamp-2 mb-2">{book.description}</p>
+                            {book.recommended_comment && (
+                                <div className="bg-white p-2 rounded-lg border border-purple-100">
+                                    <p className="text-[11px] text-[#59168b]">
+                                        <span className="font-bold">生井校長：</span>{book.recommended_comment}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        ) : (
+            <p className="text-gray-400 text-center py-4">現在表示できる推薦図書がありません</p>
         )}
       </div>
 

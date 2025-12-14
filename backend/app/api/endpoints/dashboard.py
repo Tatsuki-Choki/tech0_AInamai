@@ -98,6 +98,18 @@ async def get_students_summary(
         )
         latest_report = result.scalar_one_or_none()
 
+        # Get top abilities
+        ability_result = await db.execute(
+            select(Ability.name)
+            .join(ReportAbility, Ability.id == ReportAbility.ability_id)
+            .join(Report, Report.id == ReportAbility.report_id)
+            .where(Report.student_id == student.id)
+            .group_by(Ability.id, Ability.name)
+            .order_by(func.count(ReportAbility.id).desc())
+            .limit(3)
+        )
+        top_abilities = ability_result.scalars().all()
+
         students_summary.append(StudentSummary(
             id=student.id,
             user_id=user.id,
@@ -114,7 +126,20 @@ async def get_students_summary(
             is_primary=rel.is_primary,
             seminar_lab_id=student.seminar_lab_id,
             seminar_lab_name=student.seminar_lab.name if student.seminar_lab else None,
+            top_abilities=top_abilities,
+            alert_level=0,
         ))
+    
+    # Calculate alert levels (lowest 5 report counts)
+    if students_summary:
+        sorted_by_reports = sorted(students_summary, key=lambda x: x.total_reports)
+        # Mark bottom 5
+        cutoff_index = min(5, len(sorted_by_reports))
+        bottom_ids = {s.id for s in sorted_by_reports[:cutoff_index]}
+        
+        for summary in students_summary:
+            if summary.id in bottom_ids:
+                summary.alert_level = 1
 
     return students_summary
 

@@ -17,8 +17,7 @@ from app.services.auth import authenticate_with_google, authenticate_with_passwo
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-# Frontend URL for redirect after OAuth
-FRONTEND_URL = "http://localhost:3000"
+# Frontend URL for redirect after OAuth (from environment variable)
 
 
 @router.get("/google/login")
@@ -65,19 +64,19 @@ async def google_callback_get(
         )
 
         # Redirect to frontend with token
-        redirect_url = f"{FRONTEND_URL}/auth/callback?token={result.access_token}&role={requested_role}"
+        redirect_url = f"{settings.FRONTEND_URL}/auth/callback?token={result.access_token}&role={requested_role}"
         return RedirectResponse(url=redirect_url)
 
     except httpx.HTTPStatusError as e:
         logger.error(f"Google HTTP error: {e.response.text}")
         logger.error(traceback.format_exc())
         error_msg = urllib.parse.quote(f"Google認証に失敗しました: {e.response.text}")
-        return RedirectResponse(url=f"{FRONTEND_URL}/login?error={error_msg}")
+        return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?error={error_msg}")
     except Exception as e:
         logger.error(f"Authentication error: {str(e)}")
         logger.error(traceback.format_exc())
         error_msg = urllib.parse.quote(f"認証に失敗しました: {str(e)}")
-        return RedirectResponse(url=f"{FRONTEND_URL}/login?error={error_msg}")
+        return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?error={error_msg}")
 
 
 @router.post("/google/callback", response_model=TokenResponse)

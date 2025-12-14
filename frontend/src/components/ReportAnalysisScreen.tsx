@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Edit, Send } from 'lucide-react';
+import { ChevronLeft, Send, Edit2 } from 'lucide-react';
 import api from '../lib/api';
-
-const imgAiAvatar = "/assets/ff72433a18795fbe8154f413cbac332dae84e27b.png";
-const imgBubble = "/assets/14ce80fda9a62b69285eb6835c5c005c4790d027.png";
+import PhaseSelector from './ui/PhaseSelector';
+import type { ResearchPhase } from './ui/PhaseSelector';
+import AbilitySelector from './ui/AbilitySelector';
+import type { Ability } from './ui/AbilitySelector';
+import AiFeedbackBubble from './ui/AiFeedbackBubble';
 
 interface AnalysisResult {
   suggested_phase: string;
@@ -16,9 +18,18 @@ interface AnalysisResult {
 export default function ReportAnalysisScreen() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { content, themeId } = location.state as { content: string; themeId: string } || { content: '', themeId: '' };
+  const { content, themeId, imageUrl } = location.state as { content: string; themeId: string; imageUrl?: string } || { content: '', themeId: '' };
 
+  // Data State
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [phases, setPhases] = useState<ResearchPhase[]>([]);
+  const [abilities, setAbilities] = useState<Ability[]>([]);
+  
+  // Selection State
+  const [selectedPhaseId, setSelectedPhaseId] = useState<string>('');
+  const [selectedAbilityIds, setSelectedAbilityIds] = useState<string[]>([]);
+  
+  // UI State
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -28,40 +39,76 @@ export default function ReportAnalysisScreen() {
       return;
     }
 
-    const analyzeReport = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
-        // AI分析APIの呼び出し
-        const response = await api.post('/reports/analyze', { content });
-        setAnalysis(response.data);
+
+        // 1. マスタデータの取得 (並列実行)
+        const [phasesRes, abilitiesRes] = await Promise.all([
+          api.get<ResearchPhase[]>('/master/research-phases'),
+          api.get<Ability[]>('/master/abilities')
+        ]);
+        
+        setPhases(phasesRes.data);
+        setAbilities(abilitiesRes.data);
+
+        // 2. AI分析の実行
+        const analysisRes = await api.post<AnalysisResult>('/reports/analyze', { content });
+        const result = analysisRes.data;
+        setAnalysis(result);
+
+        // 3. 初期選択状態の設定
+        if (result.suggested_phase_id) {
+          setSelectedPhaseId(result.suggested_phase_id);
+        }
+        
+        if (result.suggested_abilities) {
+          setSelectedAbilityIds(result.suggested_abilities.map(a => a.id));
+        }
+
       } catch (error) {
-        console.error('Analysis failed:', error);
-        alert('AI分析に失敗しました。もう一度お試しください。');
+        console.error('Failed to initialize analysis screen:', error);
+        alert('データの取得またはAI分析に失敗しました。');
         navigate('/student/report');
       } finally {
         setIsLoading(false);
       }
     };
 
-    analyzeReport();
-  }, [content, navigate]);
+    fetchData();
+  }, [content, themeId, navigate]);
+
+  const handleToggleAbility = (abilityId: string) => {
+    setSelectedAbilityIds(prev => {
+      if (prev.includes(abilityId)) {
+        return prev.filter(id => id !== abilityId);
+      } else {
+        return [...prev, abilityId];
+      }
+    });
+  };
 
   const handleSubmit = async () => {
-    if (!analysis || !themeId) return;
+    if (!selectedPhaseId || !themeId) {
+      alert('探究フェーズを選択してください');
+      return;
+    }
 
     try {
       setIsSubmitting(true);
-      // 報告データの保存
+      
       await api.post('/reports', {
         content,
         theme_id: themeId,
-        phase_id: analysis.suggested_phase_id,
-        ability_ids: analysis.suggested_abilities.map(a => a.id),
+        phase_id: selectedPhaseId,
+        ability_ids: selectedAbilityIds,
+        image_url: imageUrl,
       });
+      
       navigate('/student/report/complete');
     } catch (error) {
       console.error('Submit failed:', error);
-      alert('送信に失敗しました。');
+      alert('報告の送信に失敗しました。');
     } finally {
       setIsSubmitting(false);
     }
@@ -71,7 +118,9 @@ export default function ReportAnalysisScreen() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#fef8f5] gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#59168b]"></div>
-        <p className="text-[#59168b] font-['Zen_Maru_Gothic',sans-serif]">AIが分析中...</p>
+        <p className="text-[#59168b] font-['Zen_Maru_Gothic',sans-serif] animate-pulse">
+          生井校長が分析中...
+        </p>
       </div>
     );
   }
@@ -79,97 +128,111 @@ export default function ReportAnalysisScreen() {
   if (!analysis) return null;
 
   return (
-    <div className="bg-[#fef8f5] relative size-full min-h-screen pb-8">
+    <div className="bg-[#fef8f5] min-h-screen pb-20">
       <div className="max-w-md mx-auto px-[20px] pt-[40px]">
-
+        
         {/* ヘッダー */}
-        <button
-          onClick={() => navigate('/student/report')}
-          className="flex items-center gap-1 text-[rgba(152,16,250,0.8)] font-['Zen_Maru_Gothic',sans-serif] mb-6"
-        >
-          <ChevronLeft className="w-5 h-5" />
-          <span>戻る</span>
-        </button>
+        <div className="relative flex items-center justify-center mb-8">
+          <button
+            onClick={() => navigate('/student/report')}
+            className="absolute left-0 text-[rgba(152,16,250,0.8)] flex items-center gap-1 font-['Zen_Maru_Gothic',sans-serif]"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span className="text-[14px]">戻る</span>
+          </button>
+          <h1 className="text-[#59168b] text-[18px] font-bold font-['Zen_Maru_Gothic',sans-serif]">
+            分析結果
+          </h1>
+        </div>
 
-        {/* アンプくんからのメッセージ */}
-        <div className="flex gap-4 mb-6">
-          <div className="w-[98px] shrink-0 flex flex-col items-center gap-2">
-            <span className="text-[12px] text-[rgba(152,16,250,0.7)]">アンプくん</span>
-            <div className="w-[80px] h-[80px]">
-              <img src={imgAiAvatar} alt="AI" className="object-contain w-full h-full" />
+        {/* AIフィードバック */}
+        <AiFeedbackBubble comment={analysis.ai_comment} />
+
+        {/* コンテンツカード */}
+        <div className="bg-white border border-[rgba(243,232,255,0.5)] rounded-[24px] p-6 shadow-lg flex flex-col gap-8 mb-8">
+          
+          {/* 探究フェーズ選択 */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#9810fa]"></div>
+              <h2 className="text-[#59168b] text-[16px] font-bold font-['Zen_Maru_Gothic',sans-serif]">
+                今の探究フェーズは？
+              </h2>
             </div>
-          </div>
-          <div className="flex-1 bg-white border border-[rgba(198,210,255,0.5)] rounded-[24px] rounded-tl-[18px] p-4 shadow-sm">
-            <p className="text-[#59168b] text-[14px] leading-relaxed font-['Zen_Maru_Gothic',sans-serif]">
-              {analysis.ai_comment}
-            </p>
-          </div>
-        </div>
+            <PhaseSelector
+              phases={phases}
+              selectedPhaseId={selectedPhaseId}
+              suggestedPhaseId={analysis.suggested_phase_id}
+              onSelect={setSelectedPhaseId}
+            />
+          </section>
 
-        {/* 分析結果ラベル */}
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-2 h-2 bg-[#8200db] rounded-full"></div>
-          <span className="text-[#8200db] text-[14px] font-bold">アンプくん 分析結果</span>
-        </div>
+          <hr className="border-[rgba(243,232,255,0.8)]" />
 
-        {/* フェーズカード */}
-        <div className="bg-white border border-[rgba(243,232,255,0.5)] rounded-[24px] p-6 shadow-md mb-6">
-          <h2 className="text-[#59168b] text-[16px] font-bold mb-4">探究学習のフェーズ</h2>
-          <div className="bg-gradient-to-r from-[rgba(163,179,255,0.3)] to-[rgba(124,134,255,0.3)] border border-[#a3b3ff] rounded-[24px] py-3 px-6 inline-block relative">
-            <span className="text-[#59168b] font-bold">{analysis.suggested_phase}</span>
-            <img src={imgBubble} alt="" className="absolute -top-4 -right-4 w-12 h-12 opacity-50" />
-          </div>
-        </div>
+          {/* 能力選択 */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#9810fa]"></div>
+              <h2 className="text-[#59168b] text-[16px] font-bold font-['Zen_Maru_Gothic',sans-serif]">
+                発揮した能力は？
+              </h2>
+              <span className="text-[12px] text-gray-400 ml-auto">複数選択可</span>
+            </div>
+            <AbilitySelector
+              abilities={abilities}
+              selectedAbilityIds={selectedAbilityIds}
+              suggestedAbilityIds={analysis.suggested_abilities.map(a => a.id)}
+              onToggle={handleToggleAbility}
+            />
+          </section>
 
-        {/* 能力カード */}
-        <div className="bg-white border border-[rgba(243,232,255,0.5)] rounded-[24px] p-6 shadow-md mb-6">
-          <h2 className="text-[#59168b] text-[16px] font-bold mb-4">発揮された能力</h2>
-          <div className="flex flex-col gap-4">
-            {analysis.suggested_abilities.map((ability) => (
-              <div key={ability.id} className="relative">
-                <div className="absolute -top-2 left-0 bg-gradient-to-r from-[#ff637e] to-[#ff2056] text-white text-[10px] px-2 py-0.5 rounded-full">
-                  {ability.score >= 80 ? '強く発揮' : '発揮'}
+          <hr className="border-[rgba(243,232,255,0.8)]" />
+
+          {/* 報告内容確認 */}
+          <section>
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-[#59168b] text-[14px] font-bold font-['Zen_Maru_Gothic',sans-serif]">
+                報告内容
+              </h2>
+              <button
+                onClick={() => navigate('/student/report')}
+                className="text-[rgba(152,16,250,0.8)] text-[12px] flex items-center gap-1 hover:opacity-80 transition-opacity"
+              >
+                <Edit2 className="w-3 h-3" />
+                <span>編集する</span>
+              </button>
+            </div>
+            <div className="bg-[#faf5ff] rounded-[16px] p-4 text-[14px] text-[#59168b] leading-relaxed">
+              {imageUrl && (
+                <div className="mb-4 rounded-[12px] overflow-hidden border border-[#e0c0ff]">
+                    <img src={imageUrl} alt="Uploaded" className="w-full h-auto object-cover max-h-[200px]" />
                 </div>
-                <div className="border border-[#ffa1ad] rounded-[24px] p-4 mt-2 text-center bg-[#fff5f7]">
-                  <span className="text-[#8b0836] font-bold">{ability.name}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+              )}
+              {content}
+            </div>
+          </section>
+
         </div>
 
-        {/* 進捗内容確認 */}
-        <div className="bg-white border border-[rgba(243,232,255,0.5)] rounded-[24px] p-6 shadow-md mb-8">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-[#59168b] text-[16px] font-bold">進捗内容</h2>
-            <button
-              onClick={() => navigate('/student/report')}
-              className="flex items-center gap-1 text-[rgba(152,16,250,0.8)] text-[14px]"
-            >
-              <Edit className="w-4 h-4" />
-              <span>編集</span>
-            </button>
-          </div>
-          <div className="bg-[rgba(250,245,255,0.3)] border border-[rgba(243,232,255,0.5)] rounded-[16px] p-4">
-            <p className="text-[#6e11b0] text-[14px]">{content}</p>
-          </div>
+        {/* アクションボタン */}
+        <div className="pb-8">
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="w-full h-[64px] rounded-[24px] bg-gradient-to-r from-[#a3b3ff] to-[#7c86ff] flex items-center justify-center gap-3 text-white shadow-lg hover:shadow-xl hover:opacity-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+          >
+            {isSubmitting ? (
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+            ) : (
+              <>
+                <Send className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <span className="font-bold text-[16px] font-['Zen_Maru_Gothic',sans-serif]">
+                  この内容で報告する
+                </span>
+              </>
+            )}
+          </button>
         </div>
-
-        {/* 送信ボタン */}
-        <button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="w-full h-[64px] rounded-[24px] bg-gradient-to-r from-[#a3b3ff] to-[#7c86ff] flex items-center justify-center gap-3 text-white shadow-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-        >
-          {isSubmitting ? (
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-          ) : (
-            <>
-              <Send className="w-5 h-5" />
-              <span className="font-bold text-[16px]">報告する</span>
-            </>
-          )}
-        </button>
 
       </div>
     </div>

@@ -26,6 +26,8 @@ class StudentSummary(BaseModel):
     is_primary: bool = False
     seminar_lab_id: Optional[UUID] = None
     seminar_lab_name: Optional[str] = None
+    alert_level: int = 0  # 0: Normal, 1: Warning
+    top_abilities: List[str] = []
 
 
 class StudentDetail(StudentSummary):

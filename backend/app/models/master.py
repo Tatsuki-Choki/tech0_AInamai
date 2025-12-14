@@ -41,3 +41,17 @@ class ResearchPhase(BaseModel):
 
     # Relationships
     reports = relationship("Report", back_populates="phase")
+
+
+class Book(BaseModel):
+    """推薦図書マスタ."""
+    __tablename__ = "books"
+
+    title = Column(String(255), nullable=False)
+    author = Column(String(255), nullable=True)
+    publisher = Column(String(255), nullable=True)
+    description = Column(Text, nullable=True)
+    isbn = Column(String(20), nullable=True)  # ISBN
+    cover_image_url = Column(String(2048), nullable=True)
+    recommended_comment = Column(Text, nullable=True)  # 生井校長のおすすめコメント
+    is_active = Column(Boolean, default=True, nullable=False)

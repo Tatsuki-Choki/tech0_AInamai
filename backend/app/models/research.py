@@ -38,6 +38,7 @@ class Report(BaseModel):
     phase_id = Column(UUID36, ForeignKey("research_phases.id"), nullable=True)
 
     content = Column(Text, nullable=False)  # 報告内容（原文）
+    image_url = Column(String(2048), nullable=True)  # 添付画像URL
     ai_comment = Column(Text, nullable=True)  # AIからの一言コメント
     reported_at = Column(DateTime, nullable=False)  # 報告日時
 

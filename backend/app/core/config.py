@@ -36,7 +36,8 @@ class Settings(BaseSettings):
     GEMINI_FILE_SEARCH_STORE_ID: str = "fileSearchStores/principalphilosophy-ydwhy17rmp7m"
 
     # Frontend URL (for OAuth redirect)
-    FRONTEND_URL: str = "http://localhost:3000"
+    # NOTE: frontend dev server in this repo commonly runs on :3001
+    FRONTEND_URL: str = "http://localhost:3001"
 
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:3001"]

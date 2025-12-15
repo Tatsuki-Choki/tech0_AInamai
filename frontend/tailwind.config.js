@@ -25,7 +25,7 @@ export default {
         'zen-maru': ['"Zen Maru Gothic"', 'sans-serif'],
         'inter': ['Inter', 'sans-serif'],
         'noto-sans': ['"Noto Sans JP"', 'sans-serif'],
-      }
+      },
       boxShadow: {
         'card': '0px 10px 15px -3px rgba(0,0,0,0.1), 0px 4px 6px -4px rgba(0,0,0,0.1)',
         'button-surface': '0px 1px 3px 0px rgba(0,0,0,0.1), 0px 1px 2px -1px rgba(0,0,0,0.1)',

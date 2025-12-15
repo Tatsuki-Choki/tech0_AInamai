@@ -4,6 +4,7 @@ import StudentLogin from './features/auth/StudentLogin';
 import TeacherLogin from './features/auth/TeacherLogin';
 import StudentMenu from './features/student/StudentMenu';
 import ReportScreen from './features/student/ReportScreen';
+import StudentCalendar from './features/student/StudentCalendar';
 import TeacherDashboard from './features/teacher/TeacherDashboard';
 import TeacherStudentDetail from './features/teacher/TeacherStudentDetail';
 import GoogleCallback from './features/auth/GoogleCallback';
@@ -27,7 +28,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginSelection />} />
-        
+
+
         {/* Auth Routes */}
         <Route path="/student/login" element={<StudentLogin />} />
         <Route path="/teacher/login" element={<TeacherLogin />} />
@@ -54,12 +56,7 @@ function App() {
           path="/student/calendar"
           element={
             <ProtectedRoute role="student">
-              <div className="p-8 text-center">
-                カレンダー機能は準備中です{' '}
-                <a href="/student/menu" className="text-blue-500 underline">
-                  戻る
-                </a>
-              </div>
+              <StudentCalendar />
             </ProtectedRoute>
           }
         />

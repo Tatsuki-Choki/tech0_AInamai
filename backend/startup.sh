@@ -5,10 +5,12 @@ echo "=== Starting deployment script ==="
 
 # Change to app directory
 cd /home/site/wwwroot
+export PYTHONPATH=$PYTHONPATH:/home/site/wwwroot
+ls -F /home/site/wwwroot
 
 # Run database migrations (dependencies are installed during build)
 echo "Running database migrations..."
-python -m alembic upgrade head || echo "Migration failed or already up to date"
+python -m alembic upgrade head || alembic upgrade head || echo "Migration failed or already up to date"
 echo "Migrations completed!"
 
 # Add seed execution
@@ -19,4 +21,4 @@ python -m app.db.seed_demo || echo "Demo seed failed"
 
 echo "Starting application..."
 # Start the application with Gunicorn
-exec gunicorn --bind=0.0.0.0:8000 --workers=2 --timeout=600 -k uvicorn.workers.UvicornWorker app.main:app
+exec python -m gunicorn --bind=0.0.0.0:8000 --workers=1 --timeout=1800 --access-logfile - --error-logfile - -k uvicorn.workers.UvicornWorker app.main:app

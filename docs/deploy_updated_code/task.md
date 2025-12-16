@@ -1,7 +1,8 @@
-# Deploy Updated Code
+# Azure Deployment Task List
 
-- [ ] Check current git status <!-- id: 0 -->
-- [ ] Review Azure deployment guide <!-- id: 1 -->
-- [ ] Deploy Backend <!-- id: 2 -->
-- [ ] Deploy Frontend <!-- id: 3 -->
-- [ ] Verify Deployment <!-- id: 4 -->
+- [x] Inspect deployment scripts (`frontend/deploy_frontend.sh`, `backend/deploy_backend.sh`)
+- [x] Inspect `docs/deploy_updated_code/task.md` for any specific instructions
+- [x] Create an implementation plan for deployment
+- [x] Execute backend deployment (Fixing DB connection)
+- [x] Execute frontend deployment
+- [x] Verify deployment on Azure

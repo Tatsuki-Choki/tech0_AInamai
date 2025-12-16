@@ -15,6 +15,9 @@ def get_database_url_and_ssl():
     if not url:
         print("Warning: DATABASE_URL is not set")
         return "mysql+aiomysql://localhost/test", None
+    
+    if url.startswith("sqlite"):
+        return url, None
 
     parsed = urlparse(url)
 
@@ -48,14 +51,14 @@ try:
     print(f"Database URL configured (SSL: {ssl_context is not None})")
 except Exception as e:
     print(f"Error parsing database URL: {e}")
-    database_url = "mysql+aiomysql://localhost/test"
+    database_url = "sqlite+aiosqlite:///./test.db"
     ssl_context = None
 
-connect_args = {
-    "charset": "utf8mb4",
-}
-if ssl_context:
-    connect_args["ssl"] = ssl_context
+connect_args = {}
+if "mysql" in database_url:
+    connect_args["charset"] = "utf8mb4"
+    if ssl_context:
+        connect_args["ssl"] = ssl_context
 
 engine = create_async_engine(
     database_url,

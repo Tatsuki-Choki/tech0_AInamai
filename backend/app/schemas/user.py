@@ -14,6 +14,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     role: UserRole = UserRole.STUDENT
+    password: Optional[str] = None
 
 
 class UserUpdate(BaseModel):

@@ -12,76 +12,95 @@ import {
 import { Loader2 } from 'lucide-react';
 import api from '../../../lib/api';
 import { Text } from '../../../components/ui/Typography';
-
-interface AbilityInfo {
-  id: string;
-  name: string;
-  display_order: number;
-}
-
-interface ScatterDataPoint {
-  student_id: string;
-  student_name: string;
-  grade: number | null;
-  class_name: string | null;
-  ability_scores: Record<string, number>;
-}
-
-interface ScatterDataResponse {
-  abilities: AbilityInfo[];
-  data_points: ScatterDataPoint[];
-}
+import type { AbilityInfo, ScatterDataResponse, MasterAbilityResponse } from '../../../types';
 
 interface Props {
   onStudentClick?: (studentId: string) => void;
+  students?: Array<{
+    id: string;
+    name: string;
+    grade: number | null;
+    class_name: string | null;
+  }>;
 }
 
-export default function ScatterPlot({ onStudentClick }: Props) {
+export default function ScatterPlot({ onStudentClick, students }: Props) {
   const [data, setData] = useState<ScatterDataResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [xAxisAbility, setXAxisAbility] = useState<string>('');
-  const [yAxisAbility, setYAxisAbility] = useState<string>('');
+  const [selectedAbility, setSelectedAbility] = useState<string>('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // モックデータを使用するオプションもあるが、一旦APIを呼ぶ
-        // エラー時はモックデータにフォールバックするロジックを入れておく
+
+        // 能力一覧は master から取得（正式名称＆7つを保証するため）
+        let abilitiesMaster: AbilityInfo[] = [];
+        try {
+          const abilitiesRes = await api.get<MasterAbilityResponse[]>('/master/abilities');
+          abilitiesMaster = (abilitiesRes.data || [])
+            .map((a) => ({ id: a.id, name: a.name, display_order: a.display_order }))
+            .sort((a, b) => a.display_order - b.display_order);
+        } catch (e) {
+          console.warn('Failed to fetch abilities master, fallback to embedded abilities', e);
+        }
+
+        // エラー時はモックデータにフォールバックする（ただし abilities は7つの正式名称を優先）
         try {
           const response = await api.get<ScatterDataResponse>('/dashboard/scatter-data');
-          setData(response.data);
-          if (response.data.abilities.length >= 2) {
-            setXAxisAbility(response.data.abilities[0].id);
-            setYAxisAbility(response.data.abilities[1].id);
-          }
+          const mergedAbilities = abilitiesMaster.length > 0 ? abilitiesMaster : response.data.abilities;
+          setData({ ...response.data, abilities: mergedAbilities });
+          if (mergedAbilities.length >= 1) setSelectedAbility(mergedAbilities[0].id);
         } catch (apiErr) {
            console.warn('API fetch failed, using mock data', apiErr);
+           const embeddedAbilities: AbilityInfo[] = [
+             { id: 'ability1', name: '情報収集能力と先を見る力', display_order: 1 },
+             { id: 'ability2', name: '課題設定能力と構想する力', display_order: 2 },
+             { id: 'ability3', name: '巻き込む力', display_order: 3 },
+             { id: 'ability4', name: '対話する力', display_order: 4 },
+             { id: 'ability5', name: '実行する力', display_order: 5 },
+             { id: 'ability6', name: '謙虚である力', display_order: 6 },
+             { id: 'ability7', name: '完遂する力', display_order: 7 },
+           ];
+           const abilitiesForMock = abilitiesMaster.length > 0 ? abilitiesMaster : embeddedAbilities;
+
            // Mock Data
            const mockData: ScatterDataResponse = {
-             abilities: [
-               { id: 'ability1', name: '情報収集', display_order: 1 },
-               { id: 'ability2', name: '課題設定', display_order: 2 },
-               { id: 'ability3', name: '対話', display_order: 3 },
-               { id: 'ability4', name: '実行', display_order: 4 },
-             ],
-             data_points: Array.from({ length: 20 }).map((_, i) => ({
-                student_id: `student-${i}`,
-                student_name: `生徒${i + 1}`,
-                grade: 3,
-                class_name: 'A',
-                ability_scores: {
-                  ability1: Math.random() * 100,
-                  ability2: Math.random() * 100,
-                  ability3: Math.random() * 100,
-                  ability4: Math.random() * 100,
-                }
-             }))
+             abilities: abilitiesForMock,
+             data_points: (students && students.length > 0)
+               ? students.map((s) => ({
+                   student_id: s.id,
+                   student_name: s.name,
+                   grade: s.grade,
+                   class_name: s.class_name,
+                   // APIが取れない場合は「表示上は同じ生徒集合」で0埋め（誤解を避ける）
+                   ability_scores: abilitiesForMock.reduce<Record<string, number>>((acc, a) => {
+                     acc[a.id] = 0;
+                     return acc;
+                   }, {}),
+                   ability_points: abilitiesForMock.reduce<Record<string, number>>((acc, a) => {
+                     acc[a.id] = 0;
+                     return acc;
+                   }, {}),
+                 }))
+               : Array.from({ length: 20 }).map((_, i) => ({
+                   student_id: `student-${i}`,
+                   student_name: `生徒${i + 1}`,
+                   grade: 3,
+                   class_name: 'A',
+                   ability_scores: abilitiesForMock.reduce<Record<string, number>>((acc, a) => {
+                     acc[a.id] = Math.floor(Math.random() * 20);
+                     return acc;
+                   }, {}),
+                   ability_points: abilitiesForMock.reduce<Record<string, number>>((acc, a) => {
+                     acc[a.id] = Math.floor(Math.random() * 100);
+                     return acc;
+                   }, {}),
+                 }))
            };
            setData(mockData);
-           setXAxisAbility(mockData.abilities[0].id);
-           setYAxisAbility(mockData.abilities[1].id);
+           if (mockData.abilities.length >= 1) setSelectedAbility(mockData.abilities[0].id);
         }
 
       } catch (err) {
@@ -93,20 +112,32 @@ export default function ScatterPlot({ onStudentClick }: Props) {
     };
 
     fetchData();
+    // Note: students prop is used for filtering, not fetching
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const chartData = useMemo(() => {
-    if (!data || !xAxisAbility || !yAxisAbility) return [];
+  const studentMap = useMemo(() => {
+    if (!students) return null;
+    return new Map(students.map((s) => [s.id, s]));
+  }, [students]);
 
-    return data.data_points.map((point) => ({
-      x: point.ability_scores[xAxisAbility] || 0,
-      y: point.ability_scores[yAxisAbility] || 0,
+  const chartData = useMemo(() => {
+    if (!data || !selectedAbility) return [];
+
+    const points = studentMap ? data.data_points.filter((p) => studentMap.has(p.student_id)) : data.data_points;
+
+    return points.map((point) => {
+      const s = studentMap?.get(point.student_id);
+      return {
+      x: point.ability_scores[selectedAbility] || 0, // 報告回数
+      y: (point.ability_points?.[selectedAbility]) || 0, // ポイント
       student_id: point.student_id,
-      student_name: point.student_name,
-      grade: point.grade,
-      class_name: point.class_name,
-    }));
-  }, [data, xAxisAbility, yAxisAbility]);
+      student_name: s?.name ?? point.student_name,
+      grade: s?.grade ?? point.grade,
+      class_name: s?.class_name ?? point.class_name,
+      };
+    });
+  }, [data, selectedAbility, studentMap]);
 
   const getAbilityName = (abilityId: string) => {
     return data?.abilities.find((a) => a.id === abilityId)?.name || '';
@@ -139,10 +170,18 @@ export default function ScatterPlot({ onStudentClick }: Props) {
     );
   }
 
-  if (!data || data.abilities.length < 2) {
+  if (!data || data.abilities.length < 1) {
     return (
       <div className="flex items-center justify-center h-[400px]">
-        <p className="text-brand-text-secondary font-zen-maru">データが不足しています</p>
+        <p className="text-brand-text-secondary font-zen-maru">データが不足しています（能力が1つ以上必要です）</p>
+      </div>
+    );
+  }
+
+  if (!data.data_points || data.data_points.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[400px]">
+        <p className="text-brand-text-secondary font-zen-maru">データが不足しています（生徒の報告データがありません）</p>
       </div>
     );
   }
@@ -152,28 +191,11 @@ export default function ScatterPlot({ onStudentClick }: Props) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div className="flex flex-wrap gap-4">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-zen-maru text-brand-text-secondary">X軸:</label>
+            <label className="text-sm font-zen-maru text-brand-text-secondary">能力:</label>
             <div className="relative">
               <select
-                value={xAxisAbility}
-                onChange={(e) => setXAxisAbility(e.target.value)}
-                className="appearance-none bg-white border border-brand-text-card-unselected px-4 py-2 pr-8 rounded-full text-sm font-zen-maru text-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-              >
-                {data.abilities.map((ability) => (
-                  <option key={ability.id} value={ability.id}>
-                    {ability.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-zen-maru text-brand-text-secondary">Y軸:</label>
-             <div className="relative">
-              <select
-                value={yAxisAbility}
-                onChange={(e) => setYAxisAbility(e.target.value)}
+                value={selectedAbility}
+                onChange={(e) => setSelectedAbility(e.target.value)}
                 className="appearance-none bg-white border border-brand-text-card-unselected px-4 py-2 pr-8 rounded-full text-sm font-zen-maru text-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
               >
                 {data.abilities.map((ability) => (
@@ -187,37 +209,30 @@ export default function ScatterPlot({ onStudentClick }: Props) {
         </div>
       </div>
 
-      <div className="h-[400px] w-full">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-          <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+      <div className="h-[350px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <ScatterChart margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#efedea" />
             <XAxis
               type="number"
               dataKey="x"
-              name={getAbilityName(xAxisAbility)}
-              tick={{ fontSize: 12, fontFamily: 'Zen Maru Gothic' }}
+              name="報告回数"
+              tick={{ fontSize: 10, fontFamily: 'Zen Maru Gothic' }}
               tickLine={false}
-              axisLine={{ stroke: '#efedea' }}
-              label={{
-                value: getAbilityName(xAxisAbility),
-                position: 'bottom',
-                offset: 0,
-                style: { fontSize: 12, fill: '#8e8e93', fontFamily: 'Zen Maru Gothic' },
-              }}
+              axisLine={{ stroke: '#d1d5db' }}
+              domain={[0, 'dataMax + 1']}
+              allowDecimals={false}
             />
             <YAxis
               type="number"
               dataKey="y"
-              name={getAbilityName(yAxisAbility)}
-              tick={{ fontSize: 12, fontFamily: 'Zen Maru Gothic' }}
+              name="ポイント"
+              tick={{ fontSize: 10, fontFamily: 'Zen Maru Gothic' }}
               tickLine={false}
-              axisLine={{ stroke: '#efedea' }}
-              label={{
-                value: getAbilityName(yAxisAbility),
-                angle: -90,
-                position: 'insideLeft',
-                style: { fontSize: 12, fill: '#8e8e93', textAnchor: 'middle', fontFamily: 'Zen Maru Gothic' },
-              }}
+              axisLine={{ stroke: '#d1d5db' }}
+              domain={[0, 'dataMax + 1']}
+              allowDecimals={false}
+              width={25}
             />
             <Tooltip
               cursor={{ strokeDasharray: '3 3' }}
@@ -234,10 +249,10 @@ export default function ScatterPlot({ onStudentClick }: Props) {
                       )}
                       <div className="mt-2 text-xs">
                         <p className="text-brand-primary">
-                          {getAbilityName(xAxisAbility)}: {Math.round(point.x)}
+                          {getAbilityName(selectedAbility)}（報告回数）: {Math.round(point.x)}
                         </p>
                         <p className="text-brand-primary">
-                          {getAbilityName(yAxisAbility)}: {Math.round(point.y)}
+                          {getAbilityName(selectedAbility)}（ポイント）: {Math.round(point.y)}
                         </p>
                       </div>
                     </div>
@@ -264,9 +279,11 @@ export default function ScatterPlot({ onStudentClick }: Props) {
         </ResponsiveContainer>
       </div>
 
-      <Text className="text-xs text-center mt-4">
-        散布図上の点を押すと、生徒詳細画面になります
-      </Text>
+      <div className="text-center mt-3">
+        <Text className="text-xs text-brand-text-secondary">
+          ※ 点をタップで生徒詳細へ
+        </Text>
+      </div>
     </div>
   );
 }

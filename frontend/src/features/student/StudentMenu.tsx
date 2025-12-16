@@ -1,15 +1,18 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heading } from '../../components/ui/Typography';
 import { LogOut } from 'lucide-react';
-import owlImage from '../../assets/figma/owl_character.png';
+import owlImage from '../../assets/figma/owl_character.webp';
 import { clearAuth } from '../../lib/auth';
+import AIChatModal from '../../components/chat/AIChatModal';
 
 export default function StudentMenu() {
   const navigate = useNavigate();
-  const footprintLarge = new URL('../../assets/figma/ashiato_white.png', import.meta.url).href;
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const footprintLarge = new URL('../../assets/figma/ashiato_white.webp', import.meta.url).href;
   const footprintSmall1 = new URL('../../assets/figma/ashiato_white 3.png', import.meta.url).href;
   const footprintSmall2 = new URL('../../assets/figma/ashiato_white 4-1.png', import.meta.url).href;
-  const magnifier = new URL('../../assets/figma/1715852c72fc2f582d1f5cbccac5a2f5856bc2ae.png', import.meta.url).href;
+  const magnifier = new URL('../../assets/figma/magnifier.webp', import.meta.url).href;
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 font-zen-maru relative overflow-hidden">
@@ -78,25 +81,32 @@ export default function StudentMenu() {
           ログアウト
         </button>
 
-        {/* Character Icon (Bottom Right) */}
-        <div className="absolute -bottom-5 -right-5 w-44 h-44 z-20 pointer-events-none flex items-end justify-end">
+        {/* Character Icon (Bottom Right) - Clickable for AI Chat */}
+        <button
+          onClick={() => setIsChatOpen(true)}
+          className="absolute -bottom-5 -right-5 w-44 h-44 z-20 flex items-end justify-end cursor-pointer hover:scale-105 transition-transform focus:outline-none"
+          aria-label="AIチャットを開く"
+        >
           <div className="relative w-full h-full">
             {/* Speech Bubble */}
-            <div className="absolute top-8 right-16 bg-white border-[1.5px] border-black rounded-[50%] px-3 py-1 shadow-sm z-30 flex items-center justify-center w-12 h-8">
-              <span className="text-lg font-bold tracking-tighter -mt-1">・・・</span>
+            <div className="absolute top-8 right-16 bg-white border-[1.5px] border-black rounded-[50%] px-3 py-1 shadow-sm z-30 flex items-center justify-center w-14 h-9 animate-bounce-gentle">
+              <span className="text-xs font-bold text-brand-primary">相談</span>
             </div>
             {/* Small circle for speech bubble */}
-            <div className="absolute top-14 right-[3.5rem] w-2.5 h-2.5 bg-white border-[1.5px] border-black rounded-full z-30"></div>
+            <div className="absolute top-[3.8rem] right-[3.5rem] w-2.5 h-2.5 bg-white border-[1.5px] border-black rounded-full z-30"></div>
 
             {/* Owl Image */}
             <img
               src={owlImage}
-              alt="Character"
+              alt="アンプくん - クリックして相談"
               className="w-full h-full object-contain object-bottom drop-shadow-md transform translate-x-2 translate-y-2"
             />
           </div>
-        </div>
+        </button>
       </div>
+
+      {/* AI Chat Modal */}
+      <AIChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 }

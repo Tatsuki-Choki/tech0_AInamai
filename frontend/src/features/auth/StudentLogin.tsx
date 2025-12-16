@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Heading, Text } from '../../components/ui/Typography';
 import api from '../../lib/api';
 import { clearAuth } from '../../lib/auth';
-import ashiatoBlue from '../../assets/figma/861061d1100f325310b4685b65024555cb44d267.png';
+import ashiatoBlue from '../../assets/figma/ashiato_blue.webp';
 
 export default function StudentLogin() {
   const navigate = useNavigate();
@@ -56,8 +56,8 @@ export default function StudentLogin() {
       } else {
         throw new Error('Login failed');
       }
-    } catch (err: any) {
-      console.error(err);
+    } catch (err) {
+      console.error('Login error:', err);
       setError('ログインに失敗しました。メールアドレスとパスワードを確認してください。');
     } finally {
       setTestLoginLoading(false);

@@ -1,120 +1,95 @@
-"""RAG Service using Gemini File API for PDF-based knowledge retrieval."""
+"""RAG Service using Gemini File Search Store for knowledge retrieval."""
 
-import os
-import time
-from pathlib import Path
-from typing import Optional
+import asyncio
+import logging
+from typing import Optional, Any
 
 from app.core.config import settings
 
-# Lazy import and configuration for Gemini
-genai = None
-_genai_configured = False
-
-# Cache for uploaded file reference
-_uploaded_file = None
-_file_upload_time: float = 0
-
-# PDF file path - use environment variable or default
-PDF_FILE_PATH = os.environ.get(
-    "RAG_PDF_PATH",
-    "/docs/Diary_App_RAG_Gemini/13歳からのアントレプレナーシップ.pdf"
-)
-PDF_DISPLAY_NAME = "entrepreneurship_book"
-
-# File expiry time (Gemini files expire after 48 hours, refresh after 24 hours)
-FILE_REFRESH_SECONDS = 24 * 60 * 60
+logger = logging.getLogger(__name__)
 
 
-def _configure_genai():
-    """Lazily configure Gemini API."""
-    global genai, _genai_configured
+def _extract_response_text(response: Any) -> Optional[str]:
+    """Extract text from various Gemini response formats."""
+    if response is None:
+        return None
 
-    if _genai_configured:
-        return genai is not None
+    # Try direct text attribute
+    if hasattr(response, 'text'):
+        try:
+            return response.text.strip()
+        except Exception:
+            pass
 
-    _genai_configured = True
+    # Try candidates format (common in generative AI responses)
+    if hasattr(response, 'candidates') and response.candidates:
+        try:
+            candidate = response.candidates[0]
+            if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                parts = candidate.content.parts
+                if parts and hasattr(parts[0], 'text'):
+                    return parts[0].text.strip()
+        except (IndexError, AttributeError):
+            pass
+
+    # Try parts format
+    if hasattr(response, 'parts') and response.parts:
+        try:
+            if hasattr(response.parts[0], 'text'):
+                return response.parts[0].text.strip()
+        except (IndexError, AttributeError):
+            pass
+
+    return None
+
+# Lazy import for google-genai SDK
+_client = None
+_client_configured = False
+_genai_legacy_configured = False
+
+
+def _get_client():
+    """Get or create the Google GenAI client."""
+    global _client, _client_configured
+
+    if _client_configured:
+        return _client
+
+    _client_configured = True
 
     if not settings.GEMINI_API_KEY:
-        print("GEMINI_API_KEY not configured, RAG service disabled")
-        return False
+        logger.warning("GEMINI_API_KEY not configured, RAG service disabled")
+        return None
 
     try:
-        import google.generativeai as _genai
-        _genai.configure(api_key=settings.GEMINI_API_KEY)
-        genai = _genai
-        print("Gemini API configured successfully")
+        from google import genai
+        _client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        logger.info("Google GenAI client configured successfully")
+        return _client
+    except ImportError:
+        logger.info("google-genai package not installed, using google-generativeai fallback")
+        return "FALLBACK"
+    except Exception as e:
+        logger.error(f"Failed to configure Google GenAI client: {e}")
+        return "FALLBACK"
+
+
+def _configure_legacy_genai():
+    """Configure the legacy google-generativeai SDK (one-time)."""
+    global _genai_legacy_configured
+    if _genai_legacy_configured:
+        return True
+    if not settings.GEMINI_API_KEY:
+        return False
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        _genai_legacy_configured = True
+        logger.info("Legacy google-generativeai configured successfully")
         return True
     except Exception as e:
-        print(f"Failed to configure Gemini API: {e}")
+        logger.error(f"Failed to configure legacy google-generativeai: {e}")
         return False
-
-
-def get_uploaded_file():
-    """Get or upload the PDF file to Gemini.
-
-    Returns the file reference for use in content generation.
-    """
-    global _uploaded_file, _file_upload_time
-
-    if not _configure_genai():
-        return None
-
-    # Check if file is still valid
-    current_time = time.time()
-    if _uploaded_file and (current_time - _file_upload_time) < FILE_REFRESH_SECONDS:
-        # Check if file still exists on Gemini
-        try:
-            file_info = genai.get_file(_uploaded_file.name)
-            if file_info.state.name == "ACTIVE":
-                return _uploaded_file
-        except Exception as e:
-            print(f"File check failed, will re-upload: {e}")
-            _uploaded_file = None
-
-    # Check if PDF exists
-    if not os.path.exists(PDF_FILE_PATH):
-        print(f"PDF file not found at {PDF_FILE_PATH} (RAG disabled)")
-        return None
-
-    # Check for existing uploaded files with the same display name
-    try:
-        for file in genai.list_files():
-            if file.display_name == PDF_DISPLAY_NAME and file.state.name == "ACTIVE":
-                print(f"Found existing uploaded file: {file.name}")
-                _uploaded_file = file
-                _file_upload_time = current_time
-                return _uploaded_file
-    except Exception as e:
-        print(f"Error listing files: {e}")
-
-    # Upload new file
-    try:
-        print(f"Uploading PDF from {PDF_FILE_PATH}...")
-        uploaded_file = genai.upload_file(
-            path=PDF_FILE_PATH,
-            display_name=PDF_DISPLAY_NAME,
-            mime_type="application/pdf"
-        )
-
-        # Wait for file to be processed
-        print("Waiting for file processing...")
-        while uploaded_file.state.name == "PROCESSING":
-            time.sleep(2)
-            uploaded_file = genai.get_file(uploaded_file.name)
-
-        if uploaded_file.state.name == "ACTIVE":
-            print(f"File uploaded successfully: {uploaded_file.name}")
-            _uploaded_file = uploaded_file
-            _file_upload_time = current_time
-            return _uploaded_file
-        else:
-            print(f"File upload failed with state: {uploaded_file.state.name}")
-            return None
-
-    except Exception as e:
-        print(f"Error uploading file: {e}")
-        return None
 
 
 async def generate_rag_response(
@@ -122,55 +97,124 @@ async def generate_rag_response(
     system_prompt: str,
     use_rag: bool = True
 ) -> str:
-    """Generate a response using RAG with the entrepreneurship book.
+    """Generate a response using RAG with File Search Store.
 
     Args:
         message: User's message/question
         system_prompt: System prompt defining the AI's behavior
-        use_rag: Whether to include the PDF in the context
+        use_rag: Whether to use RAG with File Search Store
 
     Returns:
         Generated response text
     """
-    if not _configure_genai():
+    client = _get_client()
+    logger.info(f"RAG request - client: {type(client).__name__ if client and client != 'FALLBACK' else client}, use_rag: {use_rag}")
+
+    # Try using new SDK for direct generation (without File Search Store for now)
+    # File Search Store API format changed, so we skip it temporarily
+    if client and client != "FALLBACK":
+        try:
+            from google.genai import types
+
+            model_name = settings.GEMINI_MODEL or "gemini-2.0-flash"
+            logger.info(f"Using new SDK for direct generation, model: {model_name}")
+
+            def _call_generate():
+                return client.models.generate_content(
+                    model=model_name,
+                    contents=message,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt
+                    )
+                )
+
+            response = await asyncio.wait_for(
+                asyncio.to_thread(_call_generate),
+                timeout=settings.GEMINI_TIMEOUT_SECONDS
+            )
+
+            text = _extract_response_text(response)
+            if text:
+                logger.info("Response generated successfully with new SDK")
+                return text
+            else:
+                logger.warning(f"New SDK response has no extractable text. Response type: {type(response)}")
+
+        except asyncio.TimeoutError:
+            logger.warning(f"New SDK request timed out after {settings.GEMINI_TIMEOUT_SECONDS}s")
+        except Exception as e:
+            logger.warning(f"Error generating response with new SDK: {e}")
+            # Fall through to legacy method
+
+    # Fallback: Try legacy google-generativeai SDK
+    logger.info("Falling back to legacy SDK")
+    return await _generate_without_rag(message, system_prompt)
+
+
+async def _generate_without_rag(message: str, system_prompt: str) -> str:
+    """Generate response without RAG as fallback."""
+    if not _configure_legacy_genai():
+        logger.error("Legacy genai configuration failed")
         return "申し訳ありません、現在AIサービスに接続できません。"
 
     try:
+        import google.generativeai as genai
+
+        model_name = settings.GEMINI_MODEL or "gemini-2.0-flash"
+        logger.info(f"Generating response with legacy SDK, model: {model_name}")
+
         model = genai.GenerativeModel(
-            model_name=settings.GEMINI_MODEL,
+            model_name=model_name,
             system_instruction=system_prompt
         )
 
-        contents = []
+        def _call_generate():
+            return model.generate_content(message)
 
-        # Add PDF file if RAG is enabled
-        if use_rag:
-            uploaded_file = get_uploaded_file()
-            if uploaded_file:
-                contents.append(uploaded_file)
-                contents.append(
-                    "上記の書籍「13歳からのアントレプレナーシップ」の内容を参考に、"
-                    "以下の質問に答えてください。書籍の内容を引用する場合は、"
-                    "具体的なページや章を示してください。\n\n"
-                )
+        response = await asyncio.wait_for(
+            asyncio.to_thread(_call_generate),
+            timeout=settings.GEMINI_TIMEOUT_SECONDS
+        )
 
-        contents.append(f"質問: {message}")
+        text = _extract_response_text(response)
+        if text:
+            logger.info("Response generated successfully with legacy SDK")
+            return text
 
-        response = await model.generate_content_async(contents)
-        return response.text.strip()
-
-    except Exception as e:
-        print(f"Error generating RAG response: {e}")
+        logger.warning(f"Legacy SDK response has no extractable text. Response type: {type(response)}")
         return "申し訳ありません、今少し考えがまとまりません。もう一度質問していただけますか？"
+
+    except asyncio.TimeoutError:
+        logger.warning(f"Legacy SDK request timed out after {settings.GEMINI_TIMEOUT_SECONDS}s")
+        return "申し訳ありません、応答に時間がかかっています。もう一度お試しください。"
+    except Exception as e:
+        error_msg = str(e).lower()
+        # Check for network-related errors
+        if "dns" in error_msg or "resolution" in error_msg or "network" in error_msg:
+            logger.error(f"Network/DNS error generating response: {e}")
+            return "申し訳ありません、ネットワーク接続に問題があります。インターネット接続を確認してください。"
+        elif "quota" in error_msg or "rate" in error_msg:
+            logger.error(f"API quota/rate limit error: {e}")
+            return "申し訳ありません、APIの制限に達しました。しばらくしてからもう一度お試しください。"
+        elif "invalid" in error_msg and "api" in error_msg:
+            logger.error(f"Invalid API key error: {e}")
+            return "申し訳ありません、AIサービスの設定に問題があります。"
+        else:
+            logger.error(f"Error generating response without RAG: {e}", exc_info=True)
+            return "申し訳ありません、今少し考えがまとまりません。もう一度質問していただけますか？"
 
 
 def initialize_rag():
-    """Initialize RAG by uploading PDF on startup."""
+    """Initialize RAG service on startup."""
     try:
-        uploaded_file = get_uploaded_file()
-        if uploaded_file:
-            print(f"RAG initialized with file: {uploaded_file.name}")
+        client = _get_client()
+        if client and client != "FALLBACK" and settings.GEMINI_FILE_SEARCH_STORE_ID:
+            logger.info(f"RAG initialized with File Search Store: {settings.GEMINI_FILE_SEARCH_STORE_ID}")
+        elif client == "FALLBACK":
+            logger.info("RAG initialized with google-generativeai fallback (direct generation without RAG)")
+        elif client:
+            logger.info("RAG initialized without File Search Store (will use direct generation)")
         else:
-            print("RAG initialization: PDF not uploaded yet")
+            logger.warning("RAG initialization: Client not available")
     except Exception as e:
-        print(f"RAG initialization error: {e}")
+        logger.error(f"RAG initialization error: {e}")

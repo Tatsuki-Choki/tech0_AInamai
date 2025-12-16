@@ -19,9 +19,11 @@ class UUID36(TypeDecorator):
 
     def process_result_value(self, value, dialect):
         if value is not None:
-            if not isinstance(value, uuid.UUID):
-                return uuid.UUID(value)
-            return value
+            # Return as string to handle both valid UUIDs and non-UUID strings
+            # like "dummy-student-001"
+            if isinstance(value, uuid.UUID):
+                return str(value)
+            return str(value)
         return None
 
 

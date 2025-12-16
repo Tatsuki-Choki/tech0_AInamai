@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Union
 from uuid import UUID
 from datetime import datetime
 
@@ -23,8 +23,8 @@ class ResearchThemeUpdate(BaseModel):
 
 
 class ResearchThemeResponse(ResearchThemeBase):
-    id: UUID
-    student_id: UUID
+    id: Union[UUID, str]  # Support both UUID and string IDs for backward compatibility
+    student_id: Union[UUID, str]  # Support both UUID and string IDs for backward compatibility
     fiscal_year: int
     status: ThemeStatus
     created_at: datetime
@@ -45,6 +45,24 @@ class AbilityResponse(BaseModel):
         from_attributes = True
 
 
+class DetectedAbility(BaseModel):
+    """AI分析で検出された能力.
+
+    Attributes:
+        name: 能力名（例: "情報収集能力と先を見る力"）
+        reason: 検出理由（例: "記述内容から最も強く表れているため"）
+        role: 能力の役割（"strong" = 主要能力, "sub" = 補助能力）
+        score: スコア（strong=80, sub=60）
+    """
+    name: str
+    reason: Optional[str] = None
+    role: str  # "strong" or "sub"
+    score: int = 60  # Default to sub score
+
+    class Config:
+        extra = "ignore"  # Allow extra fields for backward compatibility
+
+
 # Research Phase Schemas
 class ResearchPhaseResponse(BaseModel):
     id: UUID
@@ -62,6 +80,9 @@ class ReportCreate(BaseModel):
     theme_id: UUID
     phase_id: Optional[UUID] = None
     ability_ids: List[UUID] = []  # Selected abilities
+    # Pre-analyzed data from /reports/analyze to avoid re-analysis
+    ai_comment: Optional[str] = None  # Pre-analyzed AI comment
+    detected_abilities: Optional[List[DetectedAbility]] = None  # Pre-detected abilities from analyze
 
 
 class ReportUpdate(BaseModel):

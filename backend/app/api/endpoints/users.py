@@ -1,5 +1,6 @@
 from typing import List, Optional
 from uuid import UUID
+import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -10,9 +11,10 @@ from sqlalchemy.orm import selectinload
 from app.db.session import get_db
 from app.core.config import settings
 from app.core.security import get_current_user, get_current_admin, get_current_teacher_or_admin
-from app.models import User, UserRole, Student, Teacher, StudentTeacher
+from app.models import User, UserRole, Student, Teacher, StudentTeacher, StreakRecord
 from app.schemas.user import (
     UserResponse,
+    UserCreate,
     UserUpdate,
     StudentProfileUpdate,
     StudentProfileResponse,
@@ -289,3 +291,72 @@ async def list_users(
     query = query.offset(skip).limit(limit)
     result = await db.execute(query)
     return result.scalars().all()
+
+
+@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_user(
+    user_data: UserCreate,
+    current_user: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new user (admin only)."""
+    from app.services.auth import get_password_hash
+    
+    # Check if user already exists
+    result = await db.execute(select(User).where(User.email == user_data.email))
+    existing_user = result.scalar_one_or_none()
+    
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this email already exists"
+        )
+    
+    # Create user
+    user = User(
+        id=uuid.uuid4(),
+        email=user_data.email,
+        name=user_data.name,
+        avatar_url=user_data.avatar_url,
+        role=user_data.role,
+        password_hash=get_password_hash(user_data.password) if user_data.password else None,
+        is_active=True,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+    db.add(user)
+    await db.flush()
+    
+    # Create profile based on role
+    if user_data.role == UserRole.STUDENT:
+        student = Student(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        db.add(student)
+        await db.flush()
+        
+        # Create streak record
+        streak = StreakRecord(
+            id=uuid.uuid4(),
+            student_id=student.id,
+            current_streak=0,
+            max_streak=0,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        db.add(streak)
+    elif user_data.role == UserRole.TEACHER:
+        teacher = Teacher(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        db.add(teacher)
+    
+    await db.commit()
+    await db.refresh(user)
+    return user

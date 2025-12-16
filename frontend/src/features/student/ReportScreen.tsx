@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Image as ImageIcon, Eraser, ArrowRight, Home, Sparkles, Check, Edit2, Play, MessageCircle, Users } from 'lucide-react';
+import { ChevronLeft, Image as ImageIcon, Eraser, ArrowRight, Home, Sparkles, Check, Edit2, Play, Users, Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Heading } from '../../components/ui/Typography';
-import owlImage from '../../assets/figma/owl_character.png';
+import owlImage from '../../assets/figma/owl_character.webp';
+import api from '../../lib/api';
 
 // Fallback if specific step assets don't exist: reuse single footprint or CSS
 // Based on file list, we might not have 'ashiato_1.png' etc. 
@@ -12,24 +13,137 @@ import owlImage from '../../assets/figma/owl_character.png';
 
 type Step = 'theme_selection' | 'step1_photo' | 'step2_did' | 'step3_understood' | 'step4_next' | 'review' | 'confirmation';
 
+interface Theme {
+    id: string;
+    title: string;
+}
+
+interface AnalysisResult {
+    suggested_phase: string;
+    suggested_phase_id: string | null;
+    suggested_abilities: Array<{ id: string; name: string; score: number; description?: string }>;
+    ai_comment: string;
+}
+
 export default function ReportScreen() {
     const navigate = useNavigate();
     const [step, setStep] = useState<Step>('theme_selection');
-    const [theme] = useState('地域の文化');
+    const [theme, setTheme] = useState<Theme | null>(null);
+    const [themes, setThemes] = useState<Theme[]>([]);
+    const [loadingTheme, setLoadingTheme] = useState(true);
 
     // Form Data
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [textDid, setTextDid] = useState('');
     const [textUnderstood, setTextUnderstood] = useState('');
     const [textNext, setTextNext] = useState('');
 
+    // Analysis Data
+    const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Load themes list on mount
+    useEffect(() => {
+        console.log('ReportScreen mounted');
+        const loadThemes = async () => {
+            try {
+                setLoadingTheme(true);
+                // Always get all themes from database
+                const themesResponse = await api.get<Theme[]>('/themes/');
+                setThemes(themesResponse.data);
+                
+                // Try to get current fiscal year theme, otherwise use first theme
+                if (themesResponse.data.length > 0) {
+                    try {
+                        const currentResponse = await api.get<Theme>('/themes/current');
+                        setTheme(currentResponse.data);
+                    } catch (error) {
+                        // If current theme doesn't exist, use first theme
+                        const axiosError = error as { response?: { status?: number } };
+                        if (axiosError.response?.status === 404) {
+                            setTheme(themesResponse.data[0]);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load themes:', error);
+            } finally {
+                setLoadingTheme(false);
+            }
+        };
+        loadThemes();
+    }, []);
+
+    // Load themes list when showing theme selection
+    useEffect(() => {
+        if (step === 'theme_selection') {
+            const loadThemesList = async () => {
+                try {
+                    const response = await api.get<Theme[]>('/themes/');
+                    setThemes(response.data);
+                } catch (error) {
+                    console.error('Failed to load themes list:', error);
+                }
+            };
+            loadThemesList();
+        }
+    }, [step]);
+
+    const handleAnalyze = useCallback(async () => {
+        console.log('handleAnalyze called. Current State:', {
+            theme,
+            textDid,
+            textUnderstood,
+            textNext
+        });
+        if (!theme || (!textDid && !textUnderstood && !textNext)) {
+            console.warn('Missing theme or content for analysis. textDid:', textDid, 'textUnderstood:', textUnderstood, 'textNext:', textNext);
+            return;
+        }
+
+        try {
+            setIsAnalyzing(true);
+            const content = `${textDid ? `やったこと: ${textDid}\n` : ''}${textUnderstood ? `分かったこと: ${textUnderstood}\n` : ''}${textNext ? `次にすること: ${textNext}` : ''}`;
+            
+            console.log('Sending analysis request...');
+            const response = await api.post<AnalysisResult>('/reports/analyze', {
+                content,
+                theme_id: theme.id,
+            });
+            console.log('Analysis response:', response.data);
+            setAnalysisResult(response.data);
+        } catch (error) {
+            console.error('Failed to analyze:', error);
+            // Continue even if analysis fails
+        } finally {
+            setIsAnalyzing(false);
+        }
+    }, [theme, textDid, textUnderstood, textNext]);
+
+    // Analyze when entering review step
+    useEffect(() => {
+        console.log('Step changed to:', step);
+        if (step === 'review') {
+            console.log('Entering review step. Theme:', theme, 'AnalysisResult:', analysisResult, 'IsAnalyzing:', isAnalyzing);
+            if (!analysisResult && !isAnalyzing && theme) {
+                console.log('Triggering handleAnalyze');
+                handleAnalyze();
+            } else if (!theme) {
+                console.warn('Theme is missing in review step');
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [step, handleAnalyze]);
 
     // Mock Date
     const today = new Date();
     const dateStr = `${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`;
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             const reader = new FileReader();
@@ -37,17 +151,42 @@ export default function ReportScreen() {
                 setImagePreview(reader.result as string);
             };
             reader.readAsDataURL(file);
+
+            // Upload image
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                const response = await api.post<{ url: string }>('/reports/upload', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                });
+                setImageUrl(response.data.url);
+            } catch (error) {
+                console.error('Failed to upload image:', error);
+            }
         }
     };
 
     const clearCurrentInput = () => {
-        if (step === 'step1_photo') setImagePreview(null);
+        if (step === 'step1_photo') {
+            setImagePreview(null);
+            setImageUrl(null);
+        }
         if (step === 'step2_did') setTextDid('');
         if (step === 'step3_understood') setTextUnderstood('');
         if (step === 'step4_next') setTextNext('');
     };
 
     const handleNext = () => {
+        // --- TEST DEBUG: Auto-fill for testing if empty ---
+        if (import.meta.env.DEV) {
+            if (step === 'step2_did' && !textDid) setTextDid('文献調査を行いました（自動入力）');
+            if (step === 'step3_understood' && !textUnderstood) setTextUnderstood('データ不足が課題であることが分かりました（自動入力）');
+            if (step === 'step4_next' && !textNext) setTextNext('追加のデータ収集を行います（自動入力）');
+        }
+        // --------------------------------------------------
+
         if (step === 'step1_photo') setStep('step2_did');
         else if (step === 'step2_did') setStep('step3_understood');
         else if (step === 'step3_understood') setStep('step4_next');
@@ -63,8 +202,54 @@ export default function ReportScreen() {
         else if (step === 'theme_selection') navigate('/student/menu');
     };
 
-    const handlePost = () => {
-        setStep('confirmation');
+    const handlePost = async () => {
+        if (!theme) {
+            alert('探究テーマが選択されていません。テーマを選択してください。');
+            return;
+        }
+
+        if (!analysisResult) {
+            alert('分析結果が取得できていません。もう一度お試しください。');
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            const content = `${textDid ? `やったこと: ${textDid}\n` : ''}${textUnderstood ? `分かったこと: ${textUnderstood}\n` : ''}${textNext ? `次にすること: ${textNext}` : ''}`;
+            
+            if (!content.trim()) {
+                alert('報告内容を入力してください。');
+                setIsSubmitting(false);
+                return;
+            }
+            
+            // Send pre-analyzed data to avoid re-analysis on backend
+            // This ensures consistency between what student sees and what's saved
+            await api.post('/reports', {
+                content,
+                theme_id: theme.id,
+                phase_id: analysisResult.suggested_phase_id,
+                ability_ids: analysisResult.suggested_abilities.map(a => a.id),
+                image_url: imageUrl,
+                // Pre-analyzed data from /reports/analyze
+                ai_comment: analysisResult.ai_comment,
+                detected_abilities: analysisResult.suggested_abilities.map(a => ({
+                    name: a.name,
+                    reason: a.description || '',
+                    role: a.score >= 70 ? 'strong' : 'sub',
+                    score: a.score,
+                })),
+            });
+
+            setStep('confirmation');
+        } catch (error) {
+            console.error('Failed to submit report:', error);
+            const axiosError = error as { response?: { data?: { detail?: string } } };
+            const errorMessage = axiosError.response?.data?.detail || '報告の送信に失敗しました。もう一度お試しください。';
+            alert(errorMessage);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // --- Components ---
@@ -107,7 +292,7 @@ export default function ReportScreen() {
 
     const ThemeDisplay = () => (
         <div className="text-center mb-6">
-            <p className="text-brand-primary text-sm font-medium">探究テーマ：{theme}</p>
+            <p className="text-brand-primary text-sm font-medium">探究テーマ：{theme?.title || '読み込み中...'}</p>
         </div>
     );
 
@@ -133,6 +318,14 @@ export default function ReportScreen() {
 
     // --- Screens ---
 
+    if (loadingTheme && step !== 'theme_selection') {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center p-4 font-zen-maru">
+                <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
+            </div>
+        );
+    }
+
     if (step === 'theme_selection') {
         return (
             <div className="min-h-screen bg-white flex items-center justify-center p-4 font-zen-maru relative overflow-hidden">
@@ -143,13 +336,51 @@ export default function ReportScreen() {
                         </button>
                     </div>
                     <div className="flex-1 flex flex-col items-center justify-center w-full px-2">
-                        <div className="w-full mb-12">
-                            <p className="text-center text-brand-primary text-xl font-medium mb-6">あなたの探究テーマは</p>
-                            <div className="w-full bg-white rounded-[24px] border-2 border-brand-primary p-6 flex items-center justify-between shadow-sm">
-                                <span className="text-2xl text-brand-text-primary font-bold pl-2">{theme}</span>
-                            </div>
+                        <div className="w-full mb-8">
+                            <p className="text-center text-brand-primary text-xl font-medium mb-6">探究テーマを選択</p>
+
+                            {themes.length > 0 ? (
+                                <div className="w-full mb-4">
+                                    <label className="block text-sm font-medium text-brand-primary mb-2">
+                                        探究テーマを選択してください
+                                    </label>
+                                    <select
+                                        value={theme?.id || ''}
+                                        onChange={(e) => {
+                                            const selectedTheme = themes.find(t => t.id === e.target.value);
+                                            setTheme(selectedTheme || null);
+                                        }}
+                                        className="w-full bg-white rounded-[24px] border-2 border-brand-primary p-4 text-lg text-brand-text-primary font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                    >
+                                        <option value="">選択してください</option>
+                                        {themes.map((t) => (
+                                            <option key={t.id} value={t.id}>
+                                                {t.title}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            ) : (
+                                <div className="w-full bg-white rounded-[24px] border-2 border-brand-primary/30 p-6 mb-4">
+                                    <p className="text-center text-brand-text-secondary">
+                                        探究テーマが設定されていません。<br />
+                                        先生にテーマの設定を依頼してください。
+                                    </p>
+                                </div>
+                            )}
                         </div>
-                        <button onClick={() => setStep('step1_photo')} className="w-full h-24 bg-brand-primary rounded-full flex items-center justify-between px-8 shadow-md">
+                        
+                        <button
+                            onClick={() => {
+                                if (!theme) {
+                                    alert('探究テーマを選択してください。');
+                                    return;
+                                }
+                                setStep('step1_photo');
+                            }}
+                            disabled={!theme}
+                            className="w-full h-24 bg-brand-primary rounded-full flex items-center justify-between px-8 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
                             <span className="text-2xl text-white font-bold z-10">報告を始める</span>
                             <div className="relative z-10 w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
                                 <span className="text-white text-2xl font-bold">→</span>
@@ -215,10 +446,12 @@ export default function ReportScreen() {
                 : "次回の計画や取り組みたいことを入力してください...";
 
         const value = step === 'step2_did' ? textDid : step === 'step3_understood' ? textUnderstood : textNext;
-        const onChange = (e: any) => {
-            if (step === 'step2_did') setTextDid(e.target.value);
-            else if (step === 'step3_understood') setTextUnderstood(e.target.value);
-            else setTextNext(e.target.value);
+        const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+            const val = e.target.value;
+            console.log(`Input change for ${step}:`, val);
+            if (step === 'step2_did') setTextDid(val);
+            else if (step === 'step3_understood') setTextUnderstood(val);
+            else setTextNext(val);
         };
 
         return (
@@ -242,6 +475,7 @@ export default function ReportScreen() {
 
                         <div className="flex-1 min-h-[200px] bg-white rounded-[24px] p-4 shadow-sm border border-brand-text-card-unselected/30">
                             <textarea
+                                key={step}
                                 value={value}
                                 onChange={onChange}
                                 placeholder={placeholder}
@@ -279,46 +513,80 @@ export default function ReportScreen() {
                         <span className="text-brand-primary font-bold">分析結果</span>
                     </div>
 
-                    <Card className="w-full p-6 rounded-[32px] shadow-sm mb-4 bg-white relative overflow-visible mt-4">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="bg-white p-1 rounded-full shadow-sm">
-                                <Sparkles className="w-5 h-5 text-brand-text-primary fill-brand-text-primary" />
+                    {isAnalyzing ? (
+                        <Card className="w-full p-6 rounded-[32px] shadow-sm mb-4 bg-white">
+                            <div className="flex items-center justify-center py-8">
+                                <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
+                                <span className="ml-4 text-brand-primary">分析中...</span>
                             </div>
-                            <span className="font-bold text-brand-primary text-sm">探究学習のフェーズ</span>
-                        </div>
-                        <div className="text-center py-4">
-                            <span className="text-2xl font-bold text-brand-primary tracking-widest text-[#5C6BC0]">2. 情報の収集</span>
-                        </div>
-                    </Card>
-
-                    <Card className="w-full p-6 rounded-[32px] shadow-sm mb-4 bg-white">
-                        <div className="flex items-center gap-2 mb-6">
-                            <span className="text-2xl">💪</span>
-                            <span className="font-bold text-brand-primary text-sm">発揮された能力</span>
-                        </div>
-
-                        <div className="mb-6">
-                            <span className="text-xs font-bold text-brand-primary block mb-2 text-[#3F51B5]">強く発揮</span>
-                            <div className="w-full py-4 border border-[#E8EAF6] rounded-full flex items-center justify-center gap-2 bg-white shadow-sm">
-                                <div className="w-5 h-5 rounded-full bg-[#5C6BC0] text-white flex items-center justify-center text-xs font-serif">i</div>
-                                <span className="text-brand-primary font-bold text-sm tracking-wide">情報収集能力と先を見る力</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <span className="text-xs font-bold text-brand-primary block mb-2 text-[#3F51B5]">発揮</span>
-                            <div className="flex gap-3">
-                                <div className="flex-1 py-4 border border-[#E8EAF6] rounded-full flex items-center justify-center gap-2 bg-white shadow-sm">
-                                    <Users className="w-5 h-5 text-[#4CAF50]" />
-                                    <span className="text-brand-primary font-bold text-sm">巻き込む力</span>
+                        </Card>
+                    ) : analysisResult ? (
+                        <>
+                            <Card className="w-full p-6 rounded-[32px] shadow-sm mb-4 bg-white relative overflow-visible mt-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="bg-white p-1 rounded-full shadow-sm">
+                                        <Sparkles className="w-5 h-5 text-brand-text-primary fill-brand-text-primary" />
+                                    </div>
+                                    <span className="font-bold text-brand-primary text-sm">探究学習のフェーズ</span>
                                 </div>
-                                <div className="flex-1 py-4 border border-[#E8EAF6] rounded-full flex items-center justify-center gap-2 bg-white shadow-sm">
-                                    <MessageCircle className="w-5 h-5 text-[#FF9800]" />
-                                    <span className="text-brand-primary font-bold text-sm">対話する力</span>
+                                <div className="text-center py-4">
+                                    <span className="text-2xl font-bold text-brand-primary tracking-widest text-[#5C6BC0] break-words">{analysisResult.suggested_phase}</span>
                                 </div>
-                            </div>
+                            </Card>
+
+                            <Card className="w-full p-6 rounded-[32px] shadow-sm mb-4 bg-white">
+                                <div className="flex items-center gap-2 mb-6">
+                                    <span className="text-2xl">💪</span>
+                                    <span className="font-bold text-brand-primary text-sm">発揮された能力</span>
+                                </div>
+
+                                {analysisResult.suggested_abilities.length > 0 ? (
+                                    <>
+                                        {analysisResult.suggested_abilities.filter(a => a.score >= 70).length > 0 && (
+                                            <div className="mb-6">
+                                                <span className="text-xs font-bold text-brand-primary block mb-2 text-[#3F51B5]">強く発揮</span>
+                                                <div className="space-y-2">
+                                                    {analysisResult.suggested_abilities
+                                                        .filter(a => a.score >= 70)
+                                                        .map((ability) => (
+                                                            <div key={ability.id} className="w-full py-4 border border-[#E8EAF6] rounded-full flex items-center justify-center gap-2 bg-white shadow-sm">
+                                                                <div className="w-5 h-5 rounded-full bg-[#5C6BC0] text-white flex items-center justify-center text-xs font-serif">i</div>
+                                                                <span className="text-brand-primary font-bold text-sm tracking-wide break-words">{ability.name}</span>
+                                                            </div>
+                                                        ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {analysisResult.suggested_abilities.filter(a => a.score < 70 && a.score >= 50).length > 0 && (
+                                            <div>
+                                                <span className="text-xs font-bold text-brand-primary block mb-2 text-[#3F51B5]">発揮</span>
+                                                <div className="flex flex-wrap gap-3">
+                                                    {analysisResult.suggested_abilities
+                                                        .filter(a => a.score < 70 && a.score >= 50)
+                                                        .map((ability) => (
+                                                            <div key={ability.id} className="flex-1 min-w-[120px] py-4 border border-[#E8EAF6] rounded-full flex items-center justify-center gap-2 bg-white shadow-sm">
+                                                                <Users className="w-5 h-5 text-[#4CAF50]" />
+                                                                <span className="text-brand-primary font-bold text-sm break-words">{ability.name}</span>
+                                                            </div>
+                                                        ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <p className="text-gray-400 text-center py-4">能力が検出されませんでした</p>
+                                )}
+                            </Card>
+                        </>
+                    ) : (
+                        <div className="w-full mb-4 flex justify-center">
+                             <Button onClick={handleAnalyze} variant="outline" className="gap-2">
+                                <Sparkles className="w-4 h-4" />
+                                分析を再試行
+                             </Button>
                         </div>
-                    </Card>
+                    )}
 
                     <Card className="w-full p-4 rounded-[32px] shadow-sm mb-4 bg-white">
                         <div className="flex items-center gap-2 mb-4 pl-2">
@@ -373,10 +641,18 @@ export default function ReportScreen() {
                         <div className="max-w-md w-full pointer-events-auto">
                             <Button
                                 variant="primary"
-                                className="w-full h-14 text-lg rounded-full shadow-lg bg-[#253B8E] hover:bg-[#1e3073] text-white font-bold"
+                                className="w-full h-14 text-lg rounded-full shadow-lg bg-[#253B8E] hover:bg-[#1e3073] text-white font-bold disabled:opacity-50"
                                 onClick={handlePost}
+                                disabled={isSubmitting || !analysisResult}
                             >
-                                報告する
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                                        送信中...
+                                    </>
+                                ) : (
+                                    '報告する'
+                                )}
                             </Button>
                         </div>
                     </div>
@@ -416,10 +692,8 @@ export default function ReportScreen() {
                         </div>
 
                         <div className="w-full text-left pl-4 mb-8">
-                            <p className="text-brand-primary font-medium leading-relaxed">
-                                情報収集を頑張った一日でしたね！<br />
-                                情報収集は探究学習の根幹です。<br />
-                                しっかりと行えていて素晴らしい！
+                            <p className="text-brand-primary font-medium leading-relaxed break-words">
+                                {analysisResult?.ai_comment || '報告が完了しました！'}
                             </p>
                         </div>
                     </div>

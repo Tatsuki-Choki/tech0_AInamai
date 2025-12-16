@@ -55,6 +55,8 @@ class ReportAbility(BaseModel):
 
     report_id = Column(UUID36, ForeignKey("reports.id", ondelete="CASCADE"), nullable=False)
     ability_id = Column(UUID36, ForeignKey("abilities.id", ondelete="CASCADE"), nullable=False)
+    role = Column(String(16), nullable=True)  # strong / sub
+    points = Column(Integer, nullable=False, default=0)  # strong: 2, sub: 1
 
     # Relationships
     report = relationship("Report", back_populates="selected_abilities")

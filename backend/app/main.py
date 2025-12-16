@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-import subprocess
+import logging
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,23 +9,30 @@ from app.core.config import settings
 from app.api.router import api_router
 from app.services.rag import initialize_rag
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
-    print("Starting application...")
+    logger.info("Starting application...")
     try:
-        print("Initializing RAG service...")
+        logger.info("Initializing RAG service...")
         initialize_rag()
-        print("RAG service initialization complete.")
+        logger.info("RAG service initialization complete.")
     except Exception as e:
-        print(f"Warning: RAG initialization failed (non-critical): {e}")
+        logger.warning(f"RAG initialization failed (non-critical): {e}")
         # Continue anyway - RAG is optional
-    print("Application started successfully.")
+    logger.info("Application started successfully.")
     yield
     # Shutdown
-    print("Shutting down application...")
+    logger.info("Shutting down application...")
 
 
 app = FastAPI(
@@ -38,9 +45,25 @@ app = FastAPI(
 )
 
 # CORS middleware
+logger.info(f"CORS_ORIGINS configured: {settings.CORS_ORIGINS}")
+origins = settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else [settings.CORS_ORIGINS]
+# Common local dev ports (vite:5173, CRA:3000-3002) and loopback variants
+origins = list({
+    *origins,
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:3002",
+    "http://127.0.0.1:5173",
+})
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=origins,
+    # Allow Azure static hosting origins (dev/prod) without hardcoding every hostname
+    allow_origin_regex=r"https://.*\.azurewebsites\.net",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

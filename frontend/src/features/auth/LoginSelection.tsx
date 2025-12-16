@@ -1,10 +1,8 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Heading } from '../../components/ui/Typography';
-import { User, School, LogOut } from 'lucide-react';
-import ashiatoBlue from '../../assets/figma/861061d1100f325310b4685b65024555cb44d267.png';
-import owlImage from '../../assets/figma/owl_character.png';
-import { clearAuth, getStoredUser, isLoggedIn } from '../../lib/auth';
+import ashiatoBlue from '../../assets/figma/ashiato_blue.webp';
+import { getStoredUser, isLoggedIn } from '../../lib/auth';
 
 export default function LoginSelection() {
   const navigate = useNavigate();

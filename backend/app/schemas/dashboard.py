@@ -1,18 +1,18 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Union
 from uuid import UUID
 from datetime import datetime, date
 
 
 class AbilityCount(BaseModel):
-    ability_id: UUID
+    ability_id: str  # Can be UUID or string ID
     ability_name: str
     count: int
 
 
 class StudentSummary(BaseModel):
-    id: UUID  # Student ID
-    user_id: UUID
+    id: str  # Student ID - can be UUID or string ID
+    user_id: str  # User ID - can be UUID or string ID
     name: str
     email: str
     grade: Optional[int] = None
@@ -24,7 +24,7 @@ class StudentSummary(BaseModel):
     max_streak: int
     last_report_date: Optional[date] = None
     is_primary: bool = False
-    seminar_lab_id: Optional[UUID] = None
+    seminar_lab_id: Optional[str] = None  # Can be UUID or string ID
     seminar_lab_name: Optional[str] = None
     alert_level: int = 0  # 0: Normal, 1: Warning
     top_abilities: List[str] = []
@@ -35,7 +35,7 @@ class StudentDetail(StudentSummary):
 
 
 class ReportSummary(BaseModel):
-    id: UUID
+    id: str  # Can be UUID or string ID
     content: str
     phase_name: Optional[str] = None
     abilities: List[str] = []
@@ -50,21 +50,43 @@ class PaginatedResponse(BaseModel):
 
 class AbilityInfo(BaseModel):
     """能力情報."""
-    id: UUID
+    id: str  # Can be UUID or string ID
     name: str
     display_order: int
 
 
 class ScatterDataPoint(BaseModel):
     """散布図用のデータポイント."""
-    student_id: UUID
+    student_id: str  # Can be UUID or string ID
     student_name: str
     grade: Optional[int] = None
     class_name: Optional[str] = None
-    ability_scores: dict[str, int]  # ability_id -> count
+    # ability_id -> 報告回数（既存互換のため名称は維持）
+    ability_scores: dict[str, int]
+    # ability_id -> ポイント（評価スコアなど）
+    ability_points: dict[str, int] = {}
 
 
 class ScatterDataResponse(BaseModel):
     """散布図APIのレスポンス."""
     abilities: List[AbilityInfo]
     data_points: List[ScatterDataPoint]
+
+
+class StudentUpdateRequest(BaseModel):
+    """教師による生徒情報更新リクエスト."""
+    class_name: Optional[str] = None
+    grade: Optional[int] = None
+    seminar_lab_id: Optional[str] = None  # UUID as string, or null to remove assignment
+
+
+class StudentUpdateResponse(BaseModel):
+    """生徒情報更新レスポンス."""
+    id: str
+    name: str
+    email: str
+    grade: Optional[int] = None
+    class_name: Optional[str] = None
+    seminar_lab_id: Optional[str] = None
+    seminar_lab_name: Optional[str] = None
+    message: str = "Student updated successfully"

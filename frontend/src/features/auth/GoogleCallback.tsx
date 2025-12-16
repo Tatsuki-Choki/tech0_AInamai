@@ -40,7 +40,7 @@ export default function GoogleCallback() {
 
         if (role === 'teacher') navigate('/teacher/dashboard', { replace: true });
         else navigate('/student/menu', { replace: true });
-      } catch (e) {
+      } catch {
         setMessage('ログインに失敗しました。ログイン画面へ戻ります...');
         setTimeout(() => goLogin('ログインに失敗しました'), 800);
       }
@@ -58,5 +58,8 @@ export default function GoogleCallback() {
     </div>
   );
 }
+
+
+
 
 

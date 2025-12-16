@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
+from pydantic import field_validator
+from typing import Optional, Union
+import json
 
 
 class Settings(BaseSettings):
@@ -34,13 +36,28 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.0-flash"
     GEMINI_FILE_SEARCH_STORE_ID: str = "fileSearchStores/principalphilosophy-ydwhy17rmp7m"
+    # Gemini timeout (seconds). If the network call hangs, fall back to heuristics.
+    GEMINI_TIMEOUT_SECONDS: int = 30
 
     # Frontend URL (for OAuth redirect)
     # NOTE: frontend dev server in this repo commonly runs on :3001
     FRONTEND_URL: str = "http://localhost:3001"
 
-    # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:3001"]
+    # CORS - accepts JSON array string or Python list
+    CORS_ORIGINS: Union[list[str], str] = ["http://localhost:3000", "http://localhost:3001"]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v):
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except json.JSONDecodeError:
+                # If not valid JSON, try comma-separated
+                return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
     # Fiscal year (Japanese school year: April to March)
     def get_current_fiscal_year(self) -> int:

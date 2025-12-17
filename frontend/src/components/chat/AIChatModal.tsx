@@ -115,11 +115,11 @@ export default function AIChatModal({ isOpen, onClose }: Props) {
           <div className="flex items-center gap-3">
             <img
               src={owlImage}
-              alt="アンプくん"
+              alt="AIナマイ"
               className="w-10 h-10 object-contain"
             />
             <div>
-              <h3 className="font-zen-maru font-bold text-brand-primary">アンプくん</h3>
+              <h3 className="font-zen-maru font-bold text-brand-primary">AIナマイ</h3>
               <p className="text-xs text-brand-text-secondary">探究学習の相談をしよう</p>
             </div>
           </div>
@@ -141,16 +141,15 @@ export default function AIChatModal({ isOpen, onClose }: Props) {
               {message.role === 'assistant' && (
                 <img
                   src={owlImage}
-                  alt="アンプくん"
+                  alt="AIナマイ"
                   className="w-8 h-8 object-contain mr-2 flex-shrink-0"
                 />
               )}
               <div
-                className={`max-w-[75%] px-4 py-2 rounded-2xl font-zen-maru text-sm ${
-                  message.role === 'user'
+                className={`max-w-[75%] px-4 py-2 rounded-2xl font-zen-maru text-sm ${message.role === 'user'
                     ? 'bg-brand-primary text-white rounded-br-md'
                     : 'bg-gray-100 text-brand-primary rounded-bl-md'
-                }`}
+                  }`}
               >
                 <p className="whitespace-pre-wrap">{message.content}</p>
               </div>
@@ -161,7 +160,7 @@ export default function AIChatModal({ isOpen, onClose }: Props) {
             <div className="flex justify-start">
               <img
                 src={owlImage}
-                alt="アンプくん"
+                alt="AIナマイ"
                 className="w-8 h-8 object-contain mr-2 flex-shrink-0"
               />
               <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-md">

@@ -175,8 +175,8 @@ export default function StudentCalendar() {
                                 {/* Weekday Headers */}
                                 {WEEKDAYS.map((day, index) => (
                                     <div key={day} className={`font-bold text-xs py-2 ${index === 0 ? 'text-red-400' :
-                                            index === 6 ? 'text-blue-400' :
-                                                'text-gray-400'
+                                        index === 6 ? 'text-blue-400' :
+                                            'text-gray-400'
                                         }`}>
                                         {day}
                                     </div>
@@ -308,6 +308,10 @@ export default function StudentCalendar() {
                                                 src={report.image_url.startsWith('http') ? report.image_url : `${import.meta.env.VITE_API_URL?.replace('/api', '')}${report.image_url}`}
                                                 alt={`記録 ${index + 1}`}
                                                 className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    e.currentTarget.style.display = 'none';
+                                                    e.currentTarget.parentElement!.style.display = 'none';
+                                                }}
                                             />
                                         </div>
                                     )}

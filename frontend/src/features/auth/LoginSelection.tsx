@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Heading } from '../../components/ui/Typography';
 import ashiatoBlue from '../../assets/figma/ashiato_blue.webp';
+import owlCharacter from '../../assets/figma/owl_character.webp';
 import { getStoredUser, isLoggedIn } from '../../lib/auth';
 
 export default function LoginSelection() {
@@ -18,18 +19,17 @@ export default function LoginSelection() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4 font-zen-maru relative overflow-hidden">
-      <div className="w-full max-w-[400px] bg-[#fff9f5] rounded-[40px] p-8 pb-12 shadow-sm relative z-10 flex flex-col items-center min-h-[750px] border border-[#fff4ed]">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4 font-zen-maru relative overflow-hidden">
+      {/* Background decorations - optional subtle blobs */}
+      <div className="absolute top-[-10%] right-[-10%] w-[50vh] h-[50vh] bg-brand-primary/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[50vh] h-[50vh] bg-brand-buttons/5 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Header - StudentMenuと同じデザイン */}
-        <div className="w-full mt-16 mb-24 pl-2 relative">
-          <Heading level={1} className="text-[2.75rem] text-brand-primary font-normal tracking-widest mb-6 leading-tight text-center">
-            あしあと
+      <div className="w-full max-w-[400px] flex flex-col items-center z-10 space-y-12">
+        {/* Title Section */}
+        <div className="text-center space-y-4">
+          <Heading level={1} className="text-3xl text-brand-primary tracking-wider mb-2">
+            探究学習ログ
           </Heading>
-          <div className="text-brand-primary text-[0.95rem] leading-7 font-medium tracking-wide text-center">
-            <p>今日の探究が、</p>
-            <p>将来の ”あしあと” になる。</p>
-          </div>
 
           {/* Decorative Footprints (Figma asset) */}
           <img
@@ -63,6 +63,13 @@ export default function LoginSelection() {
             className="absolute top-64 right-6 w-9 h-9 object-contain rotate-[350deg]"
           />
         </div>
+
+        {/* Owl Character Illustration */}
+        <img
+          src={owlCharacter}
+          alt="AIナマイ"
+          className="w-32 h-auto object-contain opacity-90 -mb-4 z-10"
+        />
 
         {/* Buttons */}
         <div className="w-full flex flex-col items-center gap-6 mb-16 px-4">
@@ -106,6 +113,8 @@ export default function LoginSelection() {
             </div>
           </div>
         </div>
+
+
 
         {error && (
           <div className="w-full -mt-10 mb-6 px-2">

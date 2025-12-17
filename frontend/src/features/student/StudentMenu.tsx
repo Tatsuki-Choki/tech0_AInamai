@@ -62,7 +62,7 @@ export default function StudentMenu() {
             className="w-full h-36 bg-brand-buttons rounded-[32px] flex items-center justify-between pl-10 pr-10 shadow-md hover:opacity-90 transition-opacity relative overflow-hidden"
             onClick={() => navigate('/student/calendar')}
           >
-            <span className="text-4xl text-white font-normal tracking-widest z-10">振り返り</span>
+            <span className="text-[2rem] text-white font-normal tracking-widest z-10 whitespace-nowrap">振り返り</span>
             <div className="relative z-10 transform translate-x-1">
               <img src={magnifier} alt="" className="w-16 h-16 object-contain" />
             </div>
@@ -81,29 +81,30 @@ export default function StudentMenu() {
           ログアウト
         </button>
 
-        {/* Character Icon (Bottom Right) - Clickable for AI Chat */}
-        <button
-          onClick={() => setIsChatOpen(true)}
-          className="absolute -bottom-5 -right-5 w-44 h-44 z-20 flex items-end justify-end cursor-pointer hover:scale-105 transition-transform focus:outline-none"
-          aria-label="AIチャットを開く"
-        >
-          <div className="relative w-full h-full">
-            {/* Speech Bubble */}
-            <div className="absolute top-8 right-16 bg-white border-[1.5px] border-black rounded-[50%] px-3 py-1 shadow-sm z-30 flex items-center justify-center w-14 h-9 animate-bounce-gentle">
-              <span className="text-xs font-bold text-brand-primary">相談</span>
-            </div>
-            {/* Small circle for speech bubble */}
-            <div className="absolute top-[3.8rem] right-[3.5rem] w-2.5 h-2.5 bg-white border-[1.5px] border-black rounded-full z-30"></div>
-
-            {/* Owl Image */}
-            <img
-              src={owlImage}
-              alt="アンプくん - クリックして相談"
-              className="w-full h-full object-contain object-bottom drop-shadow-md transform translate-x-2 translate-y-2"
-            />
-          </div>
-        </button>
       </div>
+
+      {/* Floating Chat Button (Fixed Position) */}
+      <button
+        onClick={() => setIsChatOpen(true)}
+        className="fixed bottom-6 right-6 w-32 h-32 z-50 flex items-end justify-end cursor-pointer hover:scale-105 transition-transform focus:outline-none"
+        aria-label="AIチャットを開く"
+      >
+        <div className="relative w-full h-full">
+          {/* Speech Bubble */}
+          <div className="absolute top-4 right-10 bg-white border-[1.5px] border-black rounded-[50%] px-3 py-1 shadow-sm z-30 flex items-center justify-center w-12 h-8 animate-bounce-gentle">
+            <span className="text-[10px] font-bold text-brand-primary leading-tight">相談</span>
+          </div>
+          {/* Small circle for speech bubble */}
+          <div className="absolute top-[2.8rem] right-[2.2rem] w-2 h-2 bg-white border-[1.5px] border-black rounded-full z-30"></div>
+
+          {/* Owl Image */}
+          <img
+            src={owlImage}
+            alt="AIナマイ - クリックして相談"
+            className="w-full h-full object-contain object-bottom drop-shadow-md"
+          />
+        </div>
+      </button>
 
       {/* AI Chat Modal */}
       <AIChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />

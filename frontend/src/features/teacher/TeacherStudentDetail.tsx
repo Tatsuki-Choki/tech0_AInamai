@@ -19,6 +19,7 @@ import {
   buildAiSummary,
   buildGuidanceHint,
 } from './utils/studentDetailUtils';
+import ashiatoBlue from '../../assets/figma/ashiato_blue.webp';
 
 interface ResearchTheme {
   id: string;
@@ -335,11 +336,9 @@ export default function TeacherStudentDetail() {
   const startDay = getDay(monthStart); // 0 (Sun) - 6 (Sat)
   const paddingDays = Array.from({ length: startDay });
 
-  // Convert reports to date format for calendar display
-  const reportDates = reports.map(r => {
-    const date = new Date(r.reported_at);
-    return format(date, 'yyyy-MM-dd');
-  });
+
+
+
 
   const sortedAbilityCountsDesc = [...(student.ability_counts || [])].sort((a, b) => b.count - a.count);
   const topAbility = sortedAbilityCountsDesc[0]?.count ? sortedAbilityCountsDesc[0].ability_name : undefined;
@@ -513,7 +512,7 @@ export default function TeacherStudentDetail() {
                 <div>
                   <div className="flex items-center gap-2 mb-3 text-brand-primary">
                     <HelpCircle className="w-5 h-5" />
-                    <Heading level={2} className="text-base">AI生井による現状整理</Heading>
+                    <Heading level={2} className="text-base">AIナマイによる現状整理</Heading>
                   </div>
                   <div className="bg-[#fff4ed] rounded-[24px] p-5 border border-[#fff4ed]">
                     <Text className="text-brand-primary leading-relaxed">
@@ -651,23 +650,62 @@ export default function TeacherStudentDetail() {
                 ))}
                 {daysInMonth.map((day) => {
                   const dateStr = format(day, 'yyyy-MM-dd');
-                  const hasReport = reportDates.includes(dateStr);
+                  // Find reports for this day
+                  const dayReports = reports.filter(r => format(new Date(r.reported_at), 'yyyy-MM-dd') === dateStr);
+                  const hasReport = dayReports.length > 0;
                   const isSelected = selectedDate && isSameDay(day, selectedDate);
+
+                  // Check for images
+                  const hasImage = dayReports.some(r => r.image_url);
+                  const firstImage = dayReports.find(r => r.image_url)?.image_url;
 
                   return (
                     <button
                       key={day.toISOString()}
                       onClick={() => setSelectedDate(day)}
                       className={`
-                                        aspect-square rounded-full flex items-center justify-center relative transition-colors
-                                        ${isSelected ? 'bg-brand-primary text-white' : 'hover:bg-gray-50 text-brand-primary'}
+                                        aspect-square rounded-lg flex items-center justify-center relative transition-all duration-200 overflow-hidden
+                                        ${isSelected ? 'ring-2 ring-brand-primary ring-offset-1' : ''}
+                                        ${hasReport && !hasImage ? 'hover:bg-blue-50' : ''}
+                                        ${!hasReport && !isSelected ? 'hover:bg-gray-50' : ''}
                                     `}
                     >
-                      <span className="text-sm font-medium z-10">{format(day, 'd')}</span>
-                      {hasReport && !isSelected && (
-                        <div className="absolute inset-0 m-1">
-                          <span className="absolute bottom-0 right-0 text-[10px]">🐾</span>
+                      {/* Day number */}
+                      <span className={`absolute top-0.5 left-1 text-xs font-medium z-10 ${hasImage ? 'text-white drop-shadow-md' : (isSelected ? 'text-brand-primary' : 'text-gray-500')}`}>
+                        {format(day, 'd')}
+                      </span>
+
+                      {/* Content */}
+                      {hasImage && firstImage ? (
+                        <div className="w-full h-full">
+                          <img
+                            src={firstImage.startsWith('http') ? firstImage : `${import.meta.env.VITE_API_URL?.replace('/api', '')}${firstImage}`}
+                            alt="report"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                          {dayReports.length > 1 && (
+                            <div className="absolute bottom-0.5 right-0.5 bg-black/50 text-white text-[10px] px-1 rounded">
+                              +{dayReports.length - 1}
+                            </div>
+                          )}
                         </div>
+                      ) : hasReport ? (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <img
+                            src={ashiatoBlue}
+                            alt="report"
+                            className="w-6 h-6 object-contain opacity-80"
+                            style={{ transform: `rotate(${(day.getDate() * 15) % 360}deg)` }}
+                          />
+                        </div>
+                      ) : null}
+
+                      {/* Selection indicator if no image / report */}
+                      {isSelected && !hasReport && !hasImage && (
+                        <div className="absolute inset-0 bg-brand-primary/10 rounded-lg"></div>
                       )}
                     </button>
                   );

@@ -21,7 +21,7 @@ mkdir deploy_artifact
 cp -r dist deploy_artifact/
 
 # Create server.cjs (CommonJS enforced)
-cp server.js deploy_artifact/server.cjs
+cp server.cjs deploy_artifact/server.cjs
 
 # Create package.json for production server
 cat > deploy_artifact/package.json <<EOF

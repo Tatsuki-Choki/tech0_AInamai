@@ -55,7 +55,7 @@ export default function ReportScreen() {
                 // Always get all themes from database
                 const themesResponse = await api.get<Theme[]>('/themes/');
                 setThemes(themesResponse.data);
-                
+
                 // Try to get current fiscal year theme, otherwise use first theme
                 if (themesResponse.data.length > 0) {
                     try {
@@ -108,7 +108,7 @@ export default function ReportScreen() {
         try {
             setIsAnalyzing(true);
             const content = `${textDid ? `やったこと: ${textDid}\n` : ''}${textUnderstood ? `分かったこと: ${textUnderstood}\n` : ''}${textNext ? `次にすること: ${textNext}` : ''}`;
-            
+
             console.log('Sending analysis request...');
             const response = await api.post<AnalysisResult>('/reports/analyze', {
                 content,
@@ -216,13 +216,13 @@ export default function ReportScreen() {
         try {
             setIsSubmitting(true);
             const content = `${textDid ? `やったこと: ${textDid}\n` : ''}${textUnderstood ? `分かったこと: ${textUnderstood}\n` : ''}${textNext ? `次にすること: ${textNext}` : ''}`;
-            
+
             if (!content.trim()) {
                 alert('報告内容を入力してください。');
                 setIsSubmitting(false);
                 return;
             }
-            
+
             // Send pre-analyzed data to avoid re-analysis on backend
             // This ensures consistency between what student sees and what's saved
             await api.post('/reports', {
@@ -369,7 +369,7 @@ export default function ReportScreen() {
                                 </div>
                             )}
                         </div>
-                        
+
                         <button
                             onClick={() => {
                                 if (!theme) {
@@ -502,9 +502,9 @@ export default function ReportScreen() {
 
                     <div className="mb-2">
                         <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-bold text-brand-primary">5</span>
-                            <span className="text-sm text-brand-primary font-bold">(金)</span>
-                            <span className="text-sm text-brand-text-secondary">2025/12</span>
+                            <span className="text-4xl font-bold text-brand-primary">{today.getDate()}</span>
+                            <span className="text-sm text-brand-primary font-bold">({['日', '月', '火', '水', '木', '金', '土'][today.getDay()]})</span>
+                            <span className="text-sm text-brand-text-secondary">{today.getFullYear()}/{today.getMonth() + 1}</span>
                         </div>
                     </div>
 
@@ -581,10 +581,10 @@ export default function ReportScreen() {
                         </>
                     ) : (
                         <div className="w-full mb-4 flex justify-center">
-                             <Button onClick={handleAnalyze} variant="outline" className="gap-2">
+                            <Button onClick={handleAnalyze} variant="outline" className="gap-2">
                                 <Sparkles className="w-4 h-4" />
                                 分析を再試行
-                             </Button>
+                            </Button>
                         </div>
                     )}
 
@@ -684,8 +684,8 @@ export default function ReportScreen() {
                             <img src={owlImage} alt="Owl" className="w-32 h-32 object-contain -ml-4" />
                             <div className="text-left flex-1">
                                 <div className="mb-2">
-                                    <span className="text-4xl font-bold text-brand-primary mr-2">5</span>
-                                    <span className="text-sm text-brand-primary font-bold">土</span>
+                                    <span className="text-4xl font-bold text-brand-primary mr-2">{today.getDate()}</span>
+                                    <span className="text-sm text-brand-primary font-bold">({['日', '月', '火', '水', '木', '金', '土'][today.getDay()]})</span>
                                     <span className="text-xs text-brand-text-secondary ml-2">{dateStr}</span>
                                 </div>
                             </div>

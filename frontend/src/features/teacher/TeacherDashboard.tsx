@@ -170,7 +170,7 @@ export default function TeacherDashboard() {
                   value={selectedGrade}
                   onChange={(e) => setSelectedGrade(e.target.value)}
                 >
-                  <option value="all">すべての学年</option>
+                  <option value="all">学年</option>
                   {filterOptions.grades.map(grade => (
                     <option key={grade} value={grade?.toString()}>{grade}年</option>
                   ))}
@@ -180,7 +180,7 @@ export default function TeacherDashboard() {
                   value={selectedClass}
                   onChange={(e) => setSelectedClass(e.target.value)}
                 >
-                  <option value="all">すべてのクラス</option>
+                  <option value="all">クラス</option>
                   {filterOptions.classes.map(cls => (
                     <option key={cls} value={cls || ''}>{cls}組</option>
                   ))}
@@ -190,7 +190,7 @@ export default function TeacherDashboard() {
                   value={selectedTheme}
                   onChange={(e) => setSelectedTheme(e.target.value)}
                 >
-                  <option value="all">すべてのテーマ</option>
+                  <option value="all">テーマ</option>
                   {filterOptions.themes.map(theme => (
                     <option key={theme} value={theme || ''}>{theme}</option>
                   ))}
@@ -255,7 +255,7 @@ export default function TeacherDashboard() {
                     value={selectedGrade}
                     onChange={(e) => setSelectedGrade(e.target.value)}
                   >
-                    <option value="all">すべての学年</option>
+                    <option value="all">学年</option>
                     {filterOptions.grades.map(grade => (
                       <option key={grade} value={grade?.toString()}>{grade}年</option>
                     ))}
@@ -265,7 +265,7 @@ export default function TeacherDashboard() {
                     value={selectedClass}
                     onChange={(e) => setSelectedClass(e.target.value)}
                   >
-                    <option value="all">すべてのクラス</option>
+                    <option value="all">クラス</option>
                     {filterOptions.classes.map(cls => (
                       <option key={cls} value={cls || ''}>{cls}組</option>
                     ))}
@@ -275,7 +275,7 @@ export default function TeacherDashboard() {
                     value={selectedTheme}
                     onChange={(e) => setSelectedTheme(e.target.value)}
                   >
-                    <option value="all">すべてのテーマ</option>
+                    <option value="all">テーマ</option>
                     {filterOptions.themes.map(theme => (
                       <option key={theme} value={theme || ''}>{theme}</option>
                     ))}

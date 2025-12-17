@@ -4,6 +4,7 @@ import { Heading, Text } from '../../components/ui/Typography';
 import api from '../../lib/api';
 import { clearAuth } from '../../lib/auth';
 import ashiatoBlue from '../../assets/figma/ashiato_blue.webp';
+import owlCharacter from '../../assets/figma/owl_character.webp';
 
 export default function StudentLogin() {
   const navigate = useNavigate();
@@ -125,6 +126,13 @@ export default function StudentLogin() {
             />
           </div>
         </div>
+
+        {/* Owl Character Illustration */}
+        <img
+          src={owlCharacter}
+          alt="AIナマイ"
+          className="w-32 h-auto object-contain opacity-90 -mb-4 z-10"
+        />
 
         {/* Login Button */}
         <button

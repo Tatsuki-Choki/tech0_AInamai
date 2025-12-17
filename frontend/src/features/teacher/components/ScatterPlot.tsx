@@ -53,54 +53,54 @@ export default function ScatterPlot({ onStudentClick, students }: Props) {
           setData({ ...response.data, abilities: mergedAbilities });
           if (mergedAbilities.length >= 1) setSelectedAbility(mergedAbilities[0].id);
         } catch (apiErr) {
-           console.warn('API fetch failed, using mock data', apiErr);
-           const embeddedAbilities: AbilityInfo[] = [
-             { id: 'ability1', name: '情報収集能力と先を見る力', display_order: 1 },
-             { id: 'ability2', name: '課題設定能力と構想する力', display_order: 2 },
-             { id: 'ability3', name: '巻き込む力', display_order: 3 },
-             { id: 'ability4', name: '対話する力', display_order: 4 },
-             { id: 'ability5', name: '実行する力', display_order: 5 },
-             { id: 'ability6', name: '謙虚である力', display_order: 6 },
-             { id: 'ability7', name: '完遂する力', display_order: 7 },
-           ];
-           const abilitiesForMock = abilitiesMaster.length > 0 ? abilitiesMaster : embeddedAbilities;
+          console.warn('API fetch failed, using mock data', apiErr);
+          const embeddedAbilities: AbilityInfo[] = [
+            { id: 'ability1', name: '情報収集能力と先を見る力', display_order: 1 },
+            { id: 'ability2', name: '課題設定能力と構想する力', display_order: 2 },
+            { id: 'ability3', name: '巻き込む力', display_order: 3 },
+            { id: 'ability4', name: '対話する力', display_order: 4 },
+            { id: 'ability5', name: '実行する力', display_order: 5 },
+            { id: 'ability6', name: '謙虚である力', display_order: 6 },
+            { id: 'ability7', name: '完遂する力', display_order: 7 },
+          ];
+          const abilitiesForMock = abilitiesMaster.length > 0 ? abilitiesMaster : embeddedAbilities;
 
-           // Mock Data
-           const mockData: ScatterDataResponse = {
-             abilities: abilitiesForMock,
-             data_points: (students && students.length > 0)
-               ? students.map((s) => ({
-                   student_id: s.id,
-                   student_name: s.name,
-                   grade: s.grade,
-                   class_name: s.class_name,
-                   // APIが取れない場合は「表示上は同じ生徒集合」で0埋め（誤解を避ける）
-                   ability_scores: abilitiesForMock.reduce<Record<string, number>>((acc, a) => {
-                     acc[a.id] = 0;
-                     return acc;
-                   }, {}),
-                   ability_points: abilitiesForMock.reduce<Record<string, number>>((acc, a) => {
-                     acc[a.id] = 0;
-                     return acc;
-                   }, {}),
-                 }))
-               : Array.from({ length: 20 }).map((_, i) => ({
-                   student_id: `student-${i}`,
-                   student_name: `生徒${i + 1}`,
-                   grade: 3,
-                   class_name: 'A',
-                   ability_scores: abilitiesForMock.reduce<Record<string, number>>((acc, a) => {
-                     acc[a.id] = Math.floor(Math.random() * 20);
-                     return acc;
-                   }, {}),
-                   ability_points: abilitiesForMock.reduce<Record<string, number>>((acc, a) => {
-                     acc[a.id] = Math.floor(Math.random() * 100);
-                     return acc;
-                   }, {}),
-                 }))
-           };
-           setData(mockData);
-           if (mockData.abilities.length >= 1) setSelectedAbility(mockData.abilities[0].id);
+          // Mock Data
+          const mockData: ScatterDataResponse = {
+            abilities: abilitiesForMock,
+            data_points: (students && students.length > 0)
+              ? students.map((s) => ({
+                student_id: s.id,
+                student_name: s.name,
+                grade: s.grade,
+                class_name: s.class_name,
+                // APIが取れない場合は「表示上は同じ生徒集合」で0埋め（誤解を避ける）
+                ability_scores: abilitiesForMock.reduce<Record<string, number>>((acc, a) => {
+                  acc[a.id] = 0;
+                  return acc;
+                }, {}),
+                ability_points: abilitiesForMock.reduce<Record<string, number>>((acc, a) => {
+                  acc[a.id] = 0;
+                  return acc;
+                }, {}),
+              }))
+              : Array.from({ length: 20 }).map((_, i) => ({
+                student_id: `student-${i}`,
+                student_name: `生徒${i + 1}`,
+                grade: 3,
+                class_name: 'A',
+                ability_scores: abilitiesForMock.reduce<Record<string, number>>((acc, a) => {
+                  acc[a.id] = Math.floor(Math.random() * 20);
+                  return acc;
+                }, {}),
+                ability_points: abilitiesForMock.reduce<Record<string, number>>((acc, a) => {
+                  acc[a.id] = Math.floor(Math.random() * 100);
+                  return acc;
+                }, {}),
+              }))
+          };
+          setData(mockData);
+          if (mockData.abilities.length >= 1) setSelectedAbility(mockData.abilities[0].id);
         }
 
       } catch (err) {
@@ -129,12 +129,12 @@ export default function ScatterPlot({ onStudentClick, students }: Props) {
     return points.map((point) => {
       const s = studentMap?.get(point.student_id);
       return {
-      x: point.ability_scores[selectedAbility] || 0, // 報告回数
-      y: (point.ability_points?.[selectedAbility]) || 0, // ポイント
-      student_id: point.student_id,
-      student_name: s?.name ?? point.student_name,
-      grade: s?.grade ?? point.grade,
-      class_name: s?.class_name ?? point.class_name,
+        x: point.ability_scores[selectedAbility] || 0, // 報告回数
+        y: (point.ability_points?.[selectedAbility]) || 0, // ポイント
+        student_id: point.student_id,
+        student_name: s?.name ?? point.student_name,
+        grade: s?.grade ?? point.grade,
+        class_name: s?.class_name ?? point.class_name,
       };
     });
   }, [data, selectedAbility, studentMap]);
@@ -211,7 +211,7 @@ export default function ScatterPlot({ onStudentClick, students }: Props) {
 
       <div className="h-[350px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
+          <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#efedea" />
             <XAxis
               type="number"
@@ -222,6 +222,7 @@ export default function ScatterPlot({ onStudentClick, students }: Props) {
               axisLine={{ stroke: '#d1d5db' }}
               domain={[0, 'dataMax + 1']}
               allowDecimals={false}
+              label={{ value: '報告回数', position: 'insideBottomRight', offset: -10, fontSize: 12, fill: '#666' }}
             />
             <YAxis
               type="number"
@@ -233,6 +234,7 @@ export default function ScatterPlot({ onStudentClick, students }: Props) {
               domain={[0, 'dataMax + 1']}
               allowDecimals={false}
               width={25}
+              label={{ value: 'ポイント', angle: -90, position: 'insideLeft', offset: 10, fontSize: 12, fill: '#666' }}
             />
             <Tooltip
               cursor={{ strokeDasharray: '3 3' }}

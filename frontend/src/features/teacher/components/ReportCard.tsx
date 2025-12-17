@@ -25,7 +25,7 @@ export function ReportCard({ report, showFullDate = false }: ReportCardProps) {
           {format(new Date(report.reported_at), dateFormat, { locale: ja })}
         </Text>
       </div>
-      <Text className="text-sm mb-2">{report.content}</Text>
+      <Text className="text-sm mb-2 whitespace-pre-wrap">{report.content}</Text>
       {report.abilities.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
           {report.abilities.map((ability, idx) => (

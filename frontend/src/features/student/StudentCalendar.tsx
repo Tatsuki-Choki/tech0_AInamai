@@ -55,7 +55,7 @@ export default function StudentCalendar() {
     const fetchReports = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/reports/?limit=100');
+            const response = await api.get('/reports?limit=100');
             setReports(response.data);
         } catch (error) {
             console.error('Failed to fetch reports:', error);
@@ -174,11 +174,10 @@ export default function StudentCalendar() {
                             <div className="grid grid-cols-7 gap-1 text-center">
                                 {/* Weekday Headers */}
                                 {WEEKDAYS.map((day, index) => (
-                                    <div key={day} className={`font-bold text-xs py-2 ${
-                                        index === 0 ? 'text-red-400' :
-                                        index === 6 ? 'text-blue-400' :
-                                        'text-gray-400'
-                                    }`}>
+                                    <div key={day} className={`font-bold text-xs py-2 ${index === 0 ? 'text-red-400' :
+                                            index === 6 ? 'text-blue-400' :
+                                                'text-gray-400'
+                                        }`}>
                                         {day}
                                     </div>
                                 ))}
@@ -197,14 +196,12 @@ export default function StudentCalendar() {
                                         <div
                                             key={day}
                                             onClick={() => handleDayClick(day)}
-                                            className={`aspect-square relative rounded-lg overflow-hidden transition-all duration-200 ${
-                                                hasReports ? 'cursor-pointer hover:scale-105 hover:shadow-md' : ''
-                                            } ${isToday ? 'ring-2 ring-[#5C6BC0] ring-offset-1' : ''}`}
+                                            className={`aspect-square relative rounded-lg overflow-hidden transition-all duration-200 ${hasReports ? 'cursor-pointer hover:scale-105 hover:shadow-md' : ''
+                                                } ${isToday ? 'ring-2 ring-[#5C6BC0] ring-offset-1' : ''}`}
                                         >
                                             {/* Day number */}
-                                            <span className={`absolute top-0.5 left-1 text-xs font-medium z-10 ${
-                                                hasImage ? 'text-white drop-shadow-md' : 'text-[#5C6BC0]'
-                                            }`}>
+                                            <span className={`absolute top-0.5 left-1 text-xs font-medium z-10 ${hasImage ? 'text-white drop-shadow-md' : 'text-[#5C6BC0]'
+                                                }`}>
                                                 {day}
                                             </span>
 

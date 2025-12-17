@@ -42,17 +42,17 @@ export default function StudentMenu() {
               <img
                 src={footprintLarge}
                 alt=""
-                className="absolute right-0 top-3 w-10 h-10 object-contain rotate-[12deg]"
+                className="absolute right-2 top-4 w-10 h-10 object-contain rotate-[15deg]"
               />
               <img
                 src={footprintSmall1}
                 alt=""
-                className="absolute right-6 top-0 w-7 h-7 object-contain rotate-[-8deg]"
+                className="absolute right-12 top-2 w-7 h-7 object-contain rotate-[-10deg]"
               />
               <img
                 src={footprintSmall2}
                 alt=""
-                className="absolute right-2 top-7 w-7 h-7 object-contain rotate-[22deg]"
+                className="absolute right-8 top-10 w-7 h-7 object-contain rotate-[30deg]"
               />
             </div>
           </button>
@@ -63,8 +63,8 @@ export default function StudentMenu() {
             onClick={() => navigate('/student/calendar')}
           >
             <span className="text-[2rem] text-white font-normal tracking-widest z-10 whitespace-nowrap">振り返り</span>
-            <div className="relative z-10 transform translate-x-1">
-              <img src={magnifier} alt="" className="w-16 h-16 object-contain" />
+            <div className="relative z-10 transform translate-x-2">
+              <img src={magnifier} alt="" className="w-20 h-20 object-contain rotate-[-10deg]" />
             </div>
           </button>
         </div>

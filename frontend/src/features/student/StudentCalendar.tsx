@@ -332,7 +332,7 @@ export default function StudentCalendar() {
                                             <div className="mt-3 pt-3 border-t border-gray-200">
                                                 <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
                                                     <span>🤖</span>
-                                                    <span>AIからのコメント</span>
+                                                    <span>AIナマイからのコメント</span>
                                                 </div>
                                                 <p className="text-gray-600 text-xs italic leading-relaxed">
                                                     {report.ai_comment}

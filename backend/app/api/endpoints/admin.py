@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 import subprocess
 import os
 import sys
@@ -96,3 +96,83 @@ async def run_migrations():
         }
         
     return results
+
+from app.core.security import get_password_hash
+from app.db.session import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import Depends
+from app.models.user import User
+from sqlalchemy import select
+from pydantic import BaseModel
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    new_password: str
+
+@router.post("/reset-password")
+async def reset_password(request: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    # Find user
+    result = await db.execute(select(User).where(User.email == request.email))
+    user = result.scalars().first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    # Update password
+    user.hashed_password = get_password_hash(request.new_password)
+    await db.commit()
+    
+    return {"status": "success", "message": f"Password for {request.email} reset"}
+
+from app.models.research import ResearchTheme, ThemeStatus
+from app.models.user import Student
+
+from app.core.config import settings
+
+@router.post("/assign-theme")
+async def assign_test_theme(email: str = "student@test.com", db: AsyncSession = Depends(get_db)):
+    # Find user
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalars().first()
+    if not user:
+        return {"status": "error", "message": "User not found"}
+        
+    # Find student
+    result = await db.execute(select(Student).where(Student.user_id == user.id))
+    student = result.scalars().first()
+    if not student:
+        # Create student profile if missing (should exist though)
+        student = Student(user_id=user.id, grade=1, class_name="A", student_number="1")
+        db.add(student)
+        await db.flush()
+        
+    # Check theme for CURRENT fiscal year
+    current_fy = settings.get_current_fiscal_year()
+    result = await db.execute(select(ResearchTheme).where(
+        ResearchTheme.student_id == student.id,
+        ResearchTheme.fiscal_year == current_fy
+    ))
+    theme = result.scalars().first()
+    
+    if not theme:
+        theme = ResearchTheme(
+            student_id=student.id,
+            title="Debugging Theme",
+            description="Created for testing report submission",
+            fiscal_year=current_fy,
+            status=ThemeStatus.IN_PROGRESS
+        )
+        db.add(theme)
+        await db.commit()
+        return {"status": "success", "message": f"Theme created for FY{current_fy}"}
+    
+    return {"status": "success", "message": f"Theme already exists for FY{current_fy}"}
+
+@router.post("/seed-dummy")
+async def run_dummy_seed(background_tasks: BackgroundTasks):
+    """Run the interactive dummy data seed script."""
+    from app.db.seed_dummy_interactive import seed_dummy_interactive
+    
+    background_tasks.add_task(seed_dummy_interactive)
+    
+    return {"status": "accepted", "message": "Dummy seed started in background"}

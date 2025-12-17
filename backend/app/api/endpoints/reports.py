@@ -298,7 +298,7 @@ async def upload_image(
     return {"url": f"/static/uploads/{safe_filename}"}
 
 
-@router.get("/", response_model=List[ReportListResponse])
+@router.get("", response_model=List[ReportListResponse])
 async def get_reports(
     current_user: User = Depends(get_current_student),
     db: AsyncSession = Depends(get_db),
@@ -343,7 +343,7 @@ async def get_reports(
     ]
 
 
-@router.post("/", response_model=ReportResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ReportResponse, status_code=status.HTTP_201_CREATED)
 async def create_report(
     report_data: ReportCreate,
     current_user: User = Depends(get_current_student),

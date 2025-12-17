@@ -14,14 +14,15 @@ GEMINI_API_KEY="${GEMINI_API_KEY:-YOUR_GEMINI_API_KEY}"
 
 cd "$BACKEND_DIR"
 
+# Zip the application code, excluding unnecessary files and virtual environment
 echo "=== 1. Preparing Source Code (No Local Libs) ==="
 rm -f backend_deploy.zip
-# ソースコードのみZIP化
-zip -r backend_deploy.zip app migrations requirements.txt alembic.ini startup.sh seed_dummy_data.sql
+zip -r backend_deploy.zip . -x "venv/*" -x "venv_deploy/*" -x "*.git*" -x ".env*" -x "*.vscode*" -x "__pycache__/*" -x "*/__pycache__/*" -x "*.pyc" -x "*.pyo" -x "*.DS_Store" -x "*.db" -x "*.sqlite3"
 
 echo "=== 2. Configuring App Service for Robust Build ==="
 # タイムアウト拡張設定を追加
 # SQLiteを使用するようにDATABASE_URLを設定
+az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" --settings \
   SCM_DO_BUILD_DURING_DEPLOYMENT=true \
   ENABLE_ORYX_BUILD=true \
   SCM_COMMAND_IDLE_TIMEOUT=1800 \

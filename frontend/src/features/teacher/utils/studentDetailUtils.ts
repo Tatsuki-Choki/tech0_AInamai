@@ -23,7 +23,7 @@ export const FALLBACK_BOOKS: Book[] = [
     author: 'キャロル・S・ドゥエック',
     description:
       'この本は、人の能力は生まれつき決まっているものではなく、考え方次第で伸ばせるという「成長マインドセット」を科学的に解説しています。失敗を「才能がない証拠」と捉えるか、「成長の途中」と捉えるかで、その後の人生は大きく変わることが示されます。',
-    cover_image_url: '/static/books/マインドセット.png',
+    cover_image_url: 'https://placehold.co/200x300/5C6BC0/ffffff?text=Mindset',
     recommended_comment:
       '高校生におすすめなのは、テストの点数や部活の結果で自分の価値を決めなくてよくなるからです。努力の意味を正しく理解でき、自分を諦めなくて済む思考の土台を作ってくれる一冊です。',
   },
@@ -32,7 +32,7 @@ export const FALLBACK_BOOKS: Book[] = [
     author: 'ジーニー・ダニエル・ダック',
     description:
       '人は変わったほうがいいと頭では分かっていても、なぜか変化を拒んでしまう。その正体を「チェンジ・モンスター」という概念で解き明かす本です。変化を妨げるのは怠けではなく、人間の本能的な反応だと説明されます。',
-    cover_image_url: '/static/books/チェンジモンスター.png',
+    cover_image_url: 'https://placehold.co/200x300/5C6BC0/ffffff?text=Change+Monster',
     recommended_comment:
       '高校生にとって重要なのは、「変われない自分」を責めなくてよくなる点です。進路選択や挑戦が怖くなる理由を構造的に理解でき、自分をコントロールする視点が手に入ります。',
   },
@@ -41,7 +41,7 @@ export const FALLBACK_BOOKS: Book[] = [
     author: 'リンダ・グラットン / アンドリュー・スコット',
     description:
       '人生100年時代では、学校を出て就職し定年まで働くという一本道の人生は通用しないと説く本です。学び直し、複数のキャリア、長期視点での人生設計が必要だと示されます。',
-    cover_image_url: '/static/books/ライフシフト.png',
+    cover_image_url: 'https://placehold.co/200x300/5C6BC0/ffffff?text=Life+Shift',
     recommended_comment:
       '高校生におすすめなのは、「今決めた進路が一生を縛るわけではない」と知れるからです。将来への不安が減り、人生を長いゲームとして捉える視点が育ちます。選択を柔軟に考える力が身につきます。',
   },
@@ -50,7 +50,7 @@ export const FALLBACK_BOOKS: Book[] = [
     author: 'マダム・ホー',
     description:
       '一つの会社や仕事に依存せず、複数のスキルや収入源を組み合わせて生きる「ポートフォリオワーク」という働き方を紹介する本です。好きなことや得意なことを掛け合わせて価値を作る考え方が描かれています。',
-    cover_image_url: '/static/books/ポートフォリオワーカー.png',
+    cover_image_url: 'https://placehold.co/200x300/5C6BC0/ffffff?text=Portfolio',
     recommended_comment:
       '高校生におすすめなのは、「やりたいことが一つに決まらなくていい」と分かるからです。将来の仕事を点ではなく線や面で考えられるようになり、自分らしい働き方の発想が広がります。',
   },
@@ -59,7 +59,7 @@ export const FALLBACK_BOOKS: Book[] = [
     author: '長谷川博和 / 池上重輔 / 大場幸子',
     description:
       '本来は社会人向けの本ですが、「組織や社会はどう変わるのか」を知る入門書として非常に有効です。変革は一部の天才が起こすものではなく、現場の小さな行動の積み重ねから生まれると語られます。',
-    cover_image_url: '/static/books/ミドルからの変革.png',
+    cover_image_url: 'https://placehold.co/200x300/5C6BC0/ffffff?text=Reform',
     recommended_comment:
       '高校生におすすめなのは、社会を「決まったルールの世界」ではなく「自分たちで更新できるもの」として捉えられるようになる点です。主体的に社会を見る視点が育ちます。',
   },

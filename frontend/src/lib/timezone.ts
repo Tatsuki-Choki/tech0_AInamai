@@ -9,17 +9,18 @@ const JST_OFFSET_HOURS = 9;
  * Convert UTC date string to JST Date object
  */
 export function toJSTDate(utcDateString: string): Date {
-  const date = new Date(utcDateString);
-  // JavaScript Date objects handle timezone conversion automatically
-  // when created from ISO strings
-  return date;
+  const safeStr = utcDateString.endsWith('Z') || utcDateString.includes('+') ? utcDateString : `${utcDateString}Z`;
+  return new Date(safeStr);
 }
 
 /**
  * Get the date string (YYYY-MM-DD) in JST from a UTC timestamp
  */
 export function toJSTDateString(utcDateString: string): string {
-  const date = new Date(utcDateString);
+  // Ensure strict UTC parsing
+  const safeStr = utcDateString.endsWith('Z') || utcDateString.includes('+') ? utcDateString : `${utcDateString}Z`;
+  const date = new Date(safeStr);
+
   // Add JST offset to get JST time, then extract date
   const jstTime = new Date(date.getTime() + JST_OFFSET_HOURS * 60 * 60 * 1000);
   return jstTime.toISOString().split('T')[0];
@@ -34,7 +35,8 @@ export function formatJSTDateTime(
   utcDateString: string,
   format: 'date' | 'time' | 'datetime' | 'full' = 'datetime'
 ): string {
-  const date = new Date(utcDateString);
+  const safeStr = utcDateString.endsWith('Z') || utcDateString.includes('+') ? utcDateString : `${utcDateString}Z`;
+  const date = new Date(safeStr);
 
   const options: Intl.DateTimeFormatOptions = {
     timeZone: 'Asia/Tokyo',

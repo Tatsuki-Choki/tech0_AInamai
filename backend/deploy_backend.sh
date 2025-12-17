@@ -22,15 +22,10 @@ zip -r backend_deploy.zip app migrations requirements.txt alembic.ini startup.sh
 echo "=== 2. Configuring App Service for Robust Build ==="
 # タイムアウト拡張設定を追加
 # SQLiteを使用するようにDATABASE_URLを設定
-az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" --settings \
   SCM_DO_BUILD_DURING_DEPLOYMENT=true \
   ENABLE_ORYX_BUILD=true \
   SCM_COMMAND_IDLE_TIMEOUT=1800 \
-  WEBSITES_CONTAINER_START_TIME_LIMIT=1800 \
-  GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
-  GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET" \
-  GEMINI_API_KEY="$GEMINI_API_KEY" \
-  DATABASE_URL="sqlite+aiosqlite:////home/site/wwwroot/tankyu.db"
+  WEBSITES_CONTAINER_START_TIME_LIMIT=1800
 
 # 古い設定の削除
 az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" --settings PYTHONPATH="/home/site/wwwroot"
